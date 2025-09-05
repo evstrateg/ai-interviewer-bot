@@ -526,11 +526,87 @@ Use /reset to start a new interview or /metrics to see bot statistics.
         
         await update.message.reply_text(metrics_text, parse_mode='Markdown')
     
+    async def complete_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Manually complete current interview"""
+        user_id = update.effective_user.id
+        
+        if user_id not in self.sessions:
+            await update.message.reply_text(
+                "❌ No active interview found. Use /start to begin a new interview."
+            )
+            return
+        
+        session = self.sessions[user_id]
+        
+        # Show completion confirmation with button
+        keyboard = [
+            [InlineKeyboardButton("✅ Yes, Complete Interview", callback_data="confirm_complete")],
+            [InlineKeyboardButton("❌ Cancel", callback_data="cancel_complete")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(
+            "🤔 Are you sure you want to complete the current interview?\n\n"
+            "This will save your session to completed interviews and end the current conversation.",
+            reply_markup=reply_markup
+        )
+    
+    async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Enhanced button callback handler"""
+        query = update.callback_query
+        user_id = update.effective_user.id
+        
+        # Handle completion confirmation
+        if query.data == "confirm_complete":
+            await query.answer()
+            
+            if user_id in self.sessions:
+                session = self.sessions[user_id]
+                await self._complete_interview(session, update)
+                await query.edit_message_text("✅ Interview completed and archived!")
+            else:
+                await query.edit_message_text("❌ No active session found.")
+        
+        elif query.data == "cancel_complete":
+            await query.answer()
+            await query.edit_message_text("❌ Interview completion cancelled. Your session continues.")
+        
+        else:
+            # Handle other callbacks from parent class
+            await super().button_callback(update, context)
+    
+    async def status_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Enhanced status command with complete button"""
+        user_id = update.effective_user.id
+        
+        if user_id not in self.sessions:
+            await update.message.reply_text(
+                "❌ No active interview found. Use /start to begin a new interview."
+            )
+            return
+        
+        session = self.sessions[user_id]
+        
+        # Build status message (reuse parent logic)
+        await super().status_command(update, context)
+        
+        # Add completion button if interview has some progress
+        total_completeness = sum(session.stage_completeness.values())
+        if total_completeness > 10:  # If some progress made
+            keyboard = [[InlineKeyboardButton("✅ Complete Interview", callback_data="confirm_complete")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await update.message.reply_text(
+                "💡 You can manually complete this interview if you're done.",
+                reply_markup=reply_markup
+            )
+    
     async def setup_bot_commands(self):
         """Setup bot commands menu with enhanced version commands"""
         commands = [
             BotCommand("start", "🚀 Begin new interview"),
             BotCommand("status", "📊 Check interview progress"),
+            BotCommand("complete", "✅ Complete current interview"),
             BotCommand("reset", "🔄 Reset current session"),
             BotCommand("help", "❓ Get help and instructions"),
             BotCommand("metrics", "📈 View bot statistics"),
@@ -544,8 +620,9 @@ def main():
         # Create and run enhanced bot
         bot = EnhancedAIInterviewerBot(config.telegram_token, config.anthropic_api_key)
         
-        # Add metrics command
+        # Add enhanced commands
         bot.application.add_handler(CommandHandler("metrics", bot.metrics_command))
+        bot.application.add_handler(CommandHandler("complete", bot.complete_command))
         
         logger.info("Starting Enhanced AI Interviewer Bot...",
                    log_level=config.log_level,
