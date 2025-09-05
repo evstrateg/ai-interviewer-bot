@@ -66,3 +66,7 @@ docker-compose.override.yml
 # OS Files
 .DS_Store
 Thumbs.db
+
+# Private project documentation (our secret! 🤫)
+PROJECT_NOTES.md
+DEV_SUMMARY.md
