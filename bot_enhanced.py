@@ -423,7 +423,7 @@ class EnhancedAIInterviewerBot(AIInterviewerBot):
         
         await update.message.reply_text(response_text, parse_mode='Markdown')
     
-    async def _complete_interview(self, session: InterviewSession, update: Update):
+    async def _complete_interview(self, session: InterviewSession, update: Update, from_callback: bool = False):
         """Enhanced interview completion with metrics"""
         try:
             self.metrics.increment('sessions_completed')
@@ -454,7 +454,13 @@ class EnhancedAIInterviewerBot(AIInterviewerBot):
 Use /reset to start a new interview or /metrics to see bot statistics.
 """
             
-            await update.message.reply_text(summary, parse_mode='Markdown')
+            # Send message differently based on source
+            if from_callback:
+                # From button callback - send new message
+                await update.effective_chat.send_message(summary, parse_mode='Markdown')
+            else:
+                # From regular command - reply to message
+                await update.message.reply_text(summary, parse_mode='Markdown')
             
             # Archive completed session
             self._archive_session(session)
@@ -562,7 +568,7 @@ Use /reset to start a new interview or /metrics to see bot statistics.
             
             if user_id in self.sessions:
                 session = self.sessions[user_id]
-                await self._complete_interview(session, update)
+                await self._complete_interview(session, update, from_callback=True)
                 await query.edit_message_text("✅ Interview completed and archived!")
             else:
                 await query.edit_message_text("❌ No active session found.")
