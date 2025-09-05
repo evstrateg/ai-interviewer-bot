@@ -14,7 +14,7 @@ import pickle
 import os
 from pathlib import Path
 
-from telegram import Update, BotCommand
+from telegram import Update, BotCommand, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, CommandHandler
 from telegram_bot import (
     AIInterviewerBot, InterviewSession, PromptVariant, 
