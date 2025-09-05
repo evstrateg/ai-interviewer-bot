@@ -143,7 +143,7 @@ class ClaudeIntegration:
     
     def __init__(self, api_key: str):
         self.client = anthropic.Anthropic(api_key=api_key)
-        self.model = "claude-3-5-haiku-20241022"  # Fast Claude Haiku model
+        self.model = "claude-sonnet-4-20250514"  # Latest Claude Sonnet-4 model
         
     async def generate_interview_response(self, 
                                         session: InterviewSession, 

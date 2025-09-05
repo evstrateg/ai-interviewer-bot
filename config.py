@@ -31,7 +31,7 @@ class BotConfig:
     max_conversation_history: int = 100
     
     # Claude API settings
-    claude_model: str = "claude-3-5-haiku-20241022"
+    claude_model: str = "claude-sonnet-4-20250514"
     claude_max_tokens: int = 1000
     claude_temperature: float = 0.7
     
