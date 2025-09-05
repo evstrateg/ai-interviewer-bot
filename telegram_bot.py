@@ -143,7 +143,7 @@ class ClaudeIntegration:
     
     def __init__(self, api_key: str):
         self.client = anthropic.Anthropic(api_key=api_key)
-        self.model = "claude-3-5-sonnet-20241022"  # Latest Claude Sonnet model
+        self.model = "claude-3-5-haiku-20241022"  # Fast Claude Haiku model
         
     async def generate_interview_response(self, 
                                         session: InterviewSession, 
@@ -278,23 +278,21 @@ class AIInterviewerBot:
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
         
-        welcome_message = f"""
-🤖 **AI Professional Knowledge Interviewer**
+        welcome_message = f"""🤖 <b>AI Professional Knowledge Interviewer</b>
 
 Hello {username}! I'm an AI interviewer specialized in extracting deep professional insights through structured conversations.
 
-**What I do:**
+<b>What I do:</b>
 • Conduct 9-stage professional knowledge interviews
 • Extract implicit expertise and best practices  
 • Ask one focused question at a time
 • Adapt to your communication style
 • Generate comprehensive insights
 
-**Interview Duration:** 90-120 minutes
-**Method:** Systematic questioning with adaptive deepening
+<b>Interview Duration:</b> 90-120 minutes
+<b>Method:</b> Systematic questioning with adaptive deepening
 
-Choose your preferred interview style:
-"""
+Choose your preferred interview style:"""
         
         keyboard = [
             [InlineKeyboardButton("🎯 Master Interviewer", callback_data=f"prompt_{PromptVariant.MASTER.value}")],
@@ -306,7 +304,7 @@ Choose your preferred interview style:
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        await update.message.reply_text(welcome_message, reply_markup=reply_markup, parse_mode='Markdown')
+        await update.message.reply_text(welcome_message, reply_markup=reply_markup, parse_mode='HTML')
     
     async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle button callbacks"""
@@ -633,6 +631,10 @@ This bot conducts structured professional interviews to extract your expertise a
 
 def main():
     """Main function"""
+    # Load environment variables from .env file
+    from dotenv import load_dotenv
+    load_dotenv()
+    
     # Load configuration
     telegram_token = os.getenv('TELEGRAM_BOT_TOKEN')
     anthropic_api_key = os.getenv('ANTHROPIC_API_KEY')

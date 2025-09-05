@@ -14,6 +14,8 @@ import pickle
 import os
 from pathlib import Path
 
+from telegram import Update
+from telegram.ext import ContextTypes, CommandHandler
 from telegram_bot import (
     AIInterviewerBot, InterviewSession, PromptVariant, 
     InterviewStage, PromptManager, ClaudeIntegration
@@ -205,19 +207,23 @@ class EnhancedAIInterviewerBot(AIInterviewerBot):
     
     def _setup_periodic_tasks(self):
         """Setup periodic maintenance tasks"""
-        # Cleanup expired sessions every 30 minutes
-        self.application.job_queue.run_repeating(
-            self._cleanup_task,
-            interval=timedelta(minutes=30),
-            first=timedelta(minutes=30)
-        )
-        
-        # Log metrics every hour
-        self.application.job_queue.run_repeating(
-            self._metrics_task,
-            interval=timedelta(hours=1),
-            first=timedelta(hours=1)
-        )
+        if self.application.job_queue is not None:
+            # Cleanup expired sessions every 30 minutes
+            self.application.job_queue.run_repeating(
+                self._cleanup_task,
+                interval=timedelta(minutes=30),
+                first=timedelta(minutes=30)
+            )
+            
+            # Log metrics every hour
+            self.application.job_queue.run_repeating(
+                self._metrics_task,
+                interval=timedelta(hours=1),
+                first=timedelta(hours=1)
+            )
+            logger.info("Periodic tasks scheduled successfully")
+        else:
+            logger.warning("Job queue not available. Periodic tasks disabled. Install with: pip install 'python-telegram-bot[job-queue]'")
     
     async def _cleanup_task(self, context):
         """Periodic cleanup task"""
