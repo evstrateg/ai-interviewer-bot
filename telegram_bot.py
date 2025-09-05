@@ -21,7 +21,7 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 
 import anthropic
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, BotCommand
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
 # Configure logging
@@ -624,9 +624,31 @@ This bot conducts structured professional interviews to extract your expertise a
         
         await update.message.reply_text(help_text, parse_mode='Markdown')
     
+    async def setup_bot_commands(self):
+        """Setup bot commands menu in Telegram"""
+        commands = [
+            BotCommand("start", "🚀 Begin new interview"),
+            BotCommand("status", "📊 Check interview progress"),
+            BotCommand("reset", "🔄 Reset current session"),
+            BotCommand("help", "❓ Get help and instructions"),
+        ]
+        await self.application.bot.set_my_commands(commands)
+        logger.info("Bot commands menu configured")
+    
     def run(self):
         """Run the bot"""
         logger.info("Starting AI Interviewer Bot...")
+        
+        # Setup commands menu
+        async def setup_commands():
+            await self.setup_bot_commands()
+        
+        # Run setup then start polling
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(setup_commands())
+        
+        # Start polling
         self.application.run_polling()
 
 def main():

@@ -14,7 +14,7 @@ import pickle
 import os
 from pathlib import Path
 
-from telegram import Update
+from telegram import Update, BotCommand
 from telegram.ext import ContextTypes, CommandHandler
 from telegram_bot import (
     AIInterviewerBot, InterviewSession, PromptVariant, 
@@ -525,6 +525,18 @@ Use /reset to start a new interview or /metrics to see bot statistics.
 """
         
         await update.message.reply_text(metrics_text, parse_mode='Markdown')
+    
+    async def setup_bot_commands(self):
+        """Setup bot commands menu with enhanced version commands"""
+        commands = [
+            BotCommand("start", "🚀 Begin new interview"),
+            BotCommand("status", "📊 Check interview progress"),
+            BotCommand("reset", "🔄 Reset current session"),
+            BotCommand("help", "❓ Get help and instructions"),
+            BotCommand("metrics", "📈 View bot statistics"),
+        ]
+        await self.application.bot.set_my_commands(commands)
+        logger.info("Enhanced bot commands menu configured")
 
 def main():
     """Main function with enhanced error handling"""
