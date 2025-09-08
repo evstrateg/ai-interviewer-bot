@@ -10,6 +10,8 @@
 - [Adding New Features](#adding-new-features)
 - [Working with Prompts](#working-with-prompts)
 - [Session Management](#session-management)
+- [Voice Processing Development](#voice-processing-development)
+- [Localization Development](#localization-development)
 - [Testing and Debugging](#testing-and-debugging)
 - [Performance Optimization](#performance-optimization)
 - [Contributing Guidelines](#contributing-guidelines)
@@ -27,6 +29,9 @@ git --version
 
 # Docker (optional but recommended)
 docker --version
+
+# FFmpeg (required for voice processing)
+ffmpeg -version
 ```
 
 ### Local Development Environment
@@ -46,11 +51,18 @@ pip install -r requirements.txt
 # 4. Install development dependencies
 pip install pytest pytest-asyncio black flake8 mypy
 
-# 5. Setup environment variables
+# 5. Install voice processing dependencies
+pip install assemblyai pydub
+
+# 6. Verify FFmpeg installation (required for audio processing)
+ffmpeg -version || echo "Please install FFmpeg for voice processing"
+
+# 7. Setup environment variables
 cp .env.example .env
 # Edit .env with your tokens:
 # TELEGRAM_BOT_TOKEN=your_bot_token
 # ANTHROPIC_API_KEY=your_api_key
+# ASSEMBLYAI_API_KEY=your_assemblyai_key (for voice processing)
 ```
 
 ### IDE Setup
@@ -601,6 +613,243 @@ class SessionAnalytics:
         """Identify common dropout points"""
         # Implementation for dropout analysis
         pass
+```
+
+## 🎤 Voice Processing Development
+
+### Voice Handler Architecture
+
+The voice processing system consists of three main components:
+
+```python
+# voice_handler.py - Core Components
+from voice_handler import (
+    VoiceMessageHandler,
+    VoiceProcessingConfig, 
+    VoiceTranscriptionResult,
+    VoiceQuality,
+    create_voice_handler
+)
+
+# Configuration
+config = VoiceProcessingConfig(
+    assemblyai_api_key="your_api_key",
+    max_file_size_mb=25,
+    max_duration_seconds=600,
+    confidence_threshold=0.6,
+    default_language="en",
+    supported_languages=["en", "ru"],
+    enable_auto_language_detection=True
+)
+
+# Create handler
+voice_handler = VoiceMessageHandler(config)
+```
+
+### Processing Voice Messages
+
+```python
+async def handle_voice_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle incoming voice messages"""
+    user_id = update.effective_user.id
+    
+    try:
+        # Process voice message with the handler
+        result = await voice_handler.process_voice_message(
+            update, 
+            context,
+            session_data=get_user_session_data(user_id)
+        )
+        
+        if result.quality != VoiceQuality.FAILED:
+            # Use transcribed text as user input
+            await process_user_message(result.text, update, context)
+            
+            # Send transcription confirmation
+            response = voice_handler.format_transcription_response(result)
+            await update.message.reply_text(response)
+        else:
+            # Handle transcription failure
+            await update.message.reply_text(
+                "🎤 Sorry, I couldn't process your voice message. "
+                "Please try speaking more clearly or use text."
+            )
+            
+    except Exception as e:
+        logger.error(f"Voice processing error: {e}")
+        await update.message.reply_text(
+            "🎤 Voice processing temporarily unavailable. Please use text."
+        )
+```
+
+### Voice Processing Configuration
+
+```python
+# Advanced configuration options
+voice_config = VoiceProcessingConfig(
+    assemblyai_api_key=os.getenv("ASSEMBLYAI_API_KEY"),
+    
+    # File constraints
+    max_file_size_mb=25,  # AssemblyAI limit
+    min_duration_seconds=0.5,
+    max_duration_seconds=600,  # 10 minutes
+    
+    # Quality thresholds
+    confidence_threshold=0.6,
+    
+    # Language settings
+    default_language="en",
+    supported_languages=["en", "ru", "es", "fr"],
+    enable_auto_language_detection=True,
+    
+    # AssemblyAI features
+    enable_speaker_labels=False,  # For multi-speaker detection
+    enable_punctuation=True,
+    enable_format_text=True,
+    
+    # Performance settings
+    concurrent_requests=3,
+    retry_attempts=3,
+    retry_delay_seconds=2.0
+)
+```
+
+## 🌐 Localization Development
+
+### Localization Architecture
+
+The localization system provides comprehensive multi-language support:
+
+```python
+# localization.py - Core Components
+from localization import (
+    LocalizationManager,
+    SupportedLanguage, 
+    LanguagePreference,
+    t,  # Translation function
+    ts,  # Multiple translations
+    set_language,
+    detect_language
+)
+
+# Initialize localization manager
+localization = LocalizationManager(default_language=SupportedLanguage.ENGLISH)
+
+# Get translated text
+welcome_text = t("welcome_greeting", user_id=12345, username="John")
+```
+
+### Adding New Translations
+
+```python
+# Extend localization manager with new language
+class ExtendedLocalizationManager(LocalizationManager):
+    """Extended localization with additional languages"""
+    
+    def _get_spanish_translations(self) -> Dict[str, str]:
+        """Spanish translations"""
+        return {
+            "welcome_greeting": "¡Hola {username}! Soy un entrevistador de IA...",
+            "begin_interview": "🚀 Comenzar Entrevista",
+            "interview_complete": "🎉 ¡Entrevista Completa!",
+            # ... more translations
+        }
+    
+    def _load_translations(self) -> Dict[str, Dict[str, str]]:
+        """Load all translations including new language"""
+        translations = super()._load_translations()
+        translations["es"] = self._get_spanish_translations()
+        return translations
+
+# Usage with custom localization
+class SupportedLanguage(Enum):
+    ENGLISH = "en"
+    RUSSIAN = "ru" 
+    SPANISH = "es"  # New language
+
+localization = ExtendedLocalizationManager()
+```
+
+### Dynamic Language Detection
+
+```python
+async def detect_user_language(update: Update) -> SupportedLanguage:
+    """Detect user language from various sources"""
+    
+    # 1. Check explicit user preference
+    user_id = update.effective_user.id
+    stored_lang = localization.get_user_language(user_id)
+    if stored_lang != localization.default_language:
+        return stored_lang
+    
+    # 2. Detect from Telegram locale
+    user = update.effective_user
+    if hasattr(user, 'language_code') and user.language_code:
+        detected_lang = localization.detect_language_from_locale(user.language_code)
+        if detected_lang != localization.default_language:
+            # Auto-set preference
+            localization.set_user_language(user_id, detected_lang)
+            return detected_lang
+    
+    # 3. Analyze message content (simple heuristic)
+    if update.message and update.message.text:
+        detected_lang = analyze_text_language(update.message.text)
+        if detected_lang and detected_lang != localization.default_language:
+            return SupportedLanguage(detected_lang)
+    
+    # 4. Default fallback
+    return localization.default_language
+
+def analyze_text_language(text: str) -> Optional[str]:
+    """Simple language detection from text patterns"""
+    # Cyrillic characters indicate Russian
+    if any('\u0400' <= char <= '\u04FF' for char in text):
+        return "ru"
+    
+    # Common Spanish words
+    spanish_words = {"hola", "gracias", "por favor", "sí", "no"}
+    words = set(text.lower().split())
+    if len(words.intersection(spanish_words)) >= 2:
+        return "es"
+    
+    return None
+```
+
+### Testing Voice and Localization Features
+
+```python
+def test_voice_processing():
+    """Test voice processing functionality"""
+    config = VoiceProcessingConfig(
+        assemblyai_api_key="test_key",
+        confidence_threshold=0.5
+    )
+    
+    handler = VoiceMessageHandler(config)
+    
+    # Test configuration
+    assert config.max_file_size_mb == 25
+    assert config.confidence_threshold == 0.5
+    
+    print("✅ Voice processing tests passed")
+
+def test_localization():
+    """Test localization functionality"""
+    # Test user preferences
+    test_user_en = 12345
+    test_user_ru = 67890
+    
+    set_language(test_user_en, SupportedLanguage.ENGLISH)
+    set_language(test_user_ru, SupportedLanguage.RUSSIAN)
+    
+    # Test translations
+    assert t("welcome_greeting", test_user_en, username="John") != ""
+    assert t("welcome_greeting", test_user_ru, username="Иван") != ""
+    
+    # Test fallback
+    assert t("nonexistent_key", test_user_en) == "[Missing: nonexistent_key]"
+    
+    print("✅ All localization tests passed")
 ```
 
 ## 🧪 Testing and Debugging

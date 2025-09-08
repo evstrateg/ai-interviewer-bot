@@ -3,12 +3,14 @@
 ## Table of Contents
 
 1. [Quick Start](#quick-start)
-2. [SDK-Style Usage](#sdk-style-usage)
-3. [Integration Patterns](#integration-patterns)
-4. [Code Examples](#code-examples)
-5. [Testing Your Integration](#testing-your-integration)
-6. [Deployment Guide](#deployment-guide)
-7. [Troubleshooting](#troubleshooting)
+2. [Voice Processing Integration](#voice-processing-integration)
+3. [Localization Integration](#localization-integration)
+4. [SDK-Style Usage](#sdk-style-usage)
+5. [Integration Patterns](#integration-patterns)
+6. [Code Examples](#code-examples)
+7. [Testing Your Integration](#testing-your-integration)
+8. [Deployment Guide](#deployment-guide)
+9. [Troubleshooting](#troubleshooting)
 
 ## Quick Start
 
@@ -45,7 +47,8 @@ load_dotenv()
 def main():
     bot = EnhancedAIInterviewerBot(
         telegram_token=os.getenv('TELEGRAM_BOT_TOKEN'),
-        anthropic_api_key=os.getenv('ANTHROPIC_API_KEY')
+        anthropic_api_key=os.getenv('ANTHROPIC_API_KEY'),
+        assemblyai_api_key=os.getenv('ASSEMBLYAI_API_KEY')  # Optional for voice processing
     )
     
     print("🤖 AI Interviewer Bot starting...")
@@ -54,6 +57,529 @@ def main():
 if __name__ == '__main__':
     main()
 ```
+
+## Voice Processing Integration
+
+### Setting Up Voice Processing
+
+Voice processing enables users to send voice messages that are automatically transcribed and processed as text input.
+
+#### Basic Voice Integration
+
+```python
+#!/usr/bin/env python3
+"""
+Voice Processing Integration Example
+"""
+
+import os
+from voice_handler import (
+    VoiceMessageHandler, 
+    VoiceProcessingConfig,
+    create_voice_handler
+)
+from telegram import Update
+from telegram.ext import ContextTypes
+
+# Configure voice processing
+def setup_voice_processing():
+    """Set up voice message processing"""
+    
+    # Basic configuration
+    voice_config = VoiceProcessingConfig(
+        assemblyai_api_key=os.getenv('ASSEMBLYAI_API_KEY'),
+        max_file_size_mb=25,  # AssemblyAI limit
+        max_duration_seconds=600,  # 10 minutes
+        confidence_threshold=0.6,  # Minimum confidence for auto-acceptance
+        default_language="en",
+        supported_languages=["en", "ru"],
+        enable_auto_language_detection=True
+    )
+    
+    # Create voice handler
+    voice_handler = VoiceMessageHandler(voice_config)
+    return voice_handler
+
+# Handle voice messages in your bot
+async def handle_voice_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Process voice messages and integrate with interview flow"""
+    
+    voice_handler = setup_voice_processing()
+    user_id = update.effective_user.id
+    
+    try:
+        # Show processing indicator
+        await context.bot.send_chat_action(
+            chat_id=update.effective_chat.id, 
+            action='typing'
+        )
+        
+        # Process voice message
+        result = await voice_handler.process_voice_message(update, context)
+        
+        if result.quality.value in ['high', 'medium']:
+            # High/medium quality - proceed with transcribed text
+            transcribed_text = result.text
+            
+            # Send confirmation to user
+            confirmation = voice_handler.format_transcription_response(result)
+            await update.message.reply_text(confirmation, parse_mode='Markdown')
+            
+            # Process as regular text message
+            await process_interview_response(transcribed_text, update, context)
+            
+        elif result.quality.value == 'low':
+            # Low quality - ask for confirmation
+            keyboard = [
+                [InlineKeyboardButton("✅ Correct", callback_data=f"voice_confirm_{user_id}")],
+                [InlineKeyboardButton("🔄 Try Again", callback_data="voice_retry")],
+                [InlineKeyboardButton("💬 Type Instead", callback_data="voice_to_text")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await update.message.reply_text(
+                f"🎤⚠️ **Voice Transcription (Low Confidence: {result.confidence:.0%})**:\n\n"
+                f"{result.text}\n\n"
+                f"*Is this correct?*",
+                reply_markup=reply_markup,
+                parse_mode='Markdown'
+            )
+            
+        else:
+            # Failed transcription
+            await update.message.reply_text(
+                "🎤 Sorry, I couldn't process your voice message. "
+                "Please try speaking more clearly or use text input."
+            )
+            
+    except Exception as e:
+        logger.error(f"Voice processing error: {e}")
+        await update.message.reply_text(
+            "🎤 Voice processing temporarily unavailable. Please use text input."
+        )
+
+# Handle voice confirmation callbacks
+async def handle_voice_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle user confirmation for low-confidence transcriptions"""
+    
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data.startswith("voice_confirm_"):
+        # User confirmed transcription
+        # Extract and process the confirmed text
+        confirmed_text = extract_transcription_from_message(query.message.text)
+        await process_interview_response(confirmed_text, update, context)
+        
+        await query.edit_message_text(
+            f"✅ **Voice transcription confirmed**\n\n{confirmed_text}"
+        )
+        
+    elif query.data == "voice_retry":
+        await query.edit_message_text(
+            "🔄 Please send your voice message again, speaking more clearly."
+        )
+        
+    elif query.data == "voice_to_text":
+        await query.edit_message_text(
+            "💬 Please type your response instead."
+        )
+
+def extract_transcription_from_message(message_text: str) -> str:
+    """Extract transcription text from formatted message"""
+    lines = message_text.split('\n')
+    # Find the transcribed text (usually after empty line)
+    for i, line in enumerate(lines):
+        if line.strip() == "" and i + 1 < len(lines):
+            return lines[i + 1].strip()
+    return ""
+
+# Integration with existing bot handlers
+from telegram.ext import Application, MessageHandler, CallbackQueryHandler, filters
+
+def add_voice_support_to_bot(app: Application):
+    """Add voice processing support to existing bot"""
+    
+    # Add voice message handler
+    app.add_handler(MessageHandler(
+        filters.VOICE, 
+        handle_voice_message
+    ))
+    
+    # Add voice confirmation handler
+    app.add_handler(CallbackQueryHandler(
+        handle_voice_confirmation,
+        pattern=r"^voice_(confirm_\d+|retry|to_text)$"
+    ))
+    
+    print("✅ Voice processing support added to bot")
+```
+
+#### Advanced Voice Configuration
+
+```python
+# Advanced voice processing configuration
+def setup_advanced_voice_processing():
+    """Advanced voice configuration with custom settings"""
+    
+    # Custom audio processor with enhanced filters
+    class CustomVoiceConfig(VoiceProcessingConfig):
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            # Override defaults for better interview performance
+            self.confidence_threshold = 0.7  # Higher threshold for interviews
+            self.max_duration_seconds = 300   # 5 minutes max for focused responses
+            self.enable_punctuation = True
+            self.enable_format_text = True
+            self.concurrent_requests = 2      # Limit concurrent processing
+    
+    config = CustomVoiceConfig(
+        assemblyai_api_key=os.getenv('ASSEMBLYAI_API_KEY'),
+        supported_languages=["en", "ru", "es", "fr"],  # Extended language support
+        enable_speaker_labels=False,  # Disable for single-speaker interviews
+    )
+    
+    return VoiceMessageHandler(config)
+
+# Voice analytics and monitoring
+class VoiceAnalytics:
+    """Track voice processing performance"""
+    
+    def __init__(self):
+        self.stats = {
+            'total_processed': 0,
+            'successful_transcriptions': 0,
+            'failed_transcriptions': 0,
+            'average_confidence': 0.0,
+            'language_breakdown': {}
+        }
+    
+    def record_transcription(self, result):
+        """Record transcription result for analytics"""
+        self.stats['total_processed'] += 1
+        
+        if result.quality.value != 'failed':
+            self.stats['successful_transcriptions'] += 1
+            
+            # Update average confidence
+            current_avg = self.stats['average_confidence']
+            total = self.stats['successful_transcriptions']
+            self.stats['average_confidence'] = (
+                (current_avg * (total - 1) + result.confidence) / total
+            )
+            
+            # Track language usage
+            lang = result.language or 'unknown'
+            self.stats['language_breakdown'][lang] = (
+                self.stats['language_breakdown'].get(lang, 0) + 1
+            )
+        else:
+            self.stats['failed_transcriptions'] += 1
+    
+    def get_success_rate(self) -> float:
+        """Calculate transcription success rate"""
+        if self.stats['total_processed'] == 0:
+            return 0.0
+        return self.stats['successful_transcriptions'] / self.stats['total_processed']
+    
+    def get_stats_summary(self) -> dict:
+        """Get comprehensive stats summary"""
+        return {
+            **self.stats,
+            'success_rate': self.get_success_rate(),
+            'failure_rate': 1.0 - self.get_success_rate()
+        }
+
+# Global analytics instance
+voice_analytics = VoiceAnalytics()
+```
+
+## Localization Integration
+
+### Setting Up Multi-Language Support
+
+The localization system provides comprehensive multi-language support for all bot interactions.
+
+#### Basic Localization Setup
+
+```python
+#!/usr/bin/env python3
+"""
+Localization Integration Example
+"""
+
+from localization import (
+    LocalizationManager,
+    SupportedLanguage,
+    t,  # Translation function shortcut
+    set_language,
+    detect_language
+)
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes
+
+# Initialize localization
+localization = LocalizationManager(default_language=SupportedLanguage.ENGLISH)
+
+async def handle_start_with_localization(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Start command with automatic language detection"""
+    
+    user = update.effective_user
+    user_id = user.id
+    
+    # Detect user's preferred language
+    detected_language = SupportedLanguage.ENGLISH
+    
+    # Try to detect from Telegram locale
+    if hasattr(user, 'language_code') and user.language_code:
+        detected_language = localization.detect_language_from_locale(user.language_code)
+    
+    # Check if user has existing preference
+    existing_language = localization.get_user_language(user_id)
+    
+    if existing_language == localization.default_language and detected_language != existing_language:
+        # Show language selection for new users
+        await show_language_selection(update, context)
+    else:
+        # Proceed with detected/existing language
+        await show_welcome_message(update, context, user_id)
+
+async def show_language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show language selection menu"""
+    
+    keyboard = [
+        [
+            InlineKeyboardButton("🇺🇸 English", callback_data="lang_en"),
+            InlineKeyboardButton("🇷🇺 Русский", callback_data="lang_ru")
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    message = (
+        "🌐 **Language Selection / Выбор языка**\n\n"
+        "Please select your preferred language:\n"
+        "Пожалуйста, выберите предпочитаемый язык:"
+    )
+    
+    await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+
+async def handle_language_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle language selection callback"""
+    
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    
+    if query.data == "lang_en":
+        localization.set_user_language(user_id, SupportedLanguage.ENGLISH)
+        selected_lang = "English"
+    elif query.data == "lang_ru":
+        localization.set_user_language(user_id, SupportedLanguage.RUSSIAN)
+        selected_lang = "Русский"
+    
+    # Send confirmation in selected language
+    confirmation = t("language_set", user_id, language=selected_lang)
+    await query.edit_message_text(confirmation)
+    
+    # Show welcome message in selected language
+    await show_welcome_message(query, context, user_id)
+
+async def show_welcome_message(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id: int):
+    """Show localized welcome message"""
+    
+    username = update.effective_user.first_name or "User"
+    
+    # Get all localized content
+    welcome_title = t("welcome_title", user_id)
+    welcome_greeting = t("welcome_greeting", user_id, username=username)
+    welcome_features = t("welcome_features", user_id)
+    choose_style = t("welcome_choose_style", user_id)
+    
+    # Build message
+    message_parts = [
+        welcome_title,
+        "",
+        welcome_greeting,
+        "",
+        t("welcome_what_i_do", user_id),
+        welcome_features,
+        "",
+        choose_style
+    ]
+    
+    welcome_message = "\n".join(message_parts)
+    
+    # Create localized buttons
+    keyboard = [
+        [InlineKeyboardButton(
+            t("btn_master", user_id), 
+            callback_data="prompt_v1_master"
+        )],
+        [InlineKeyboardButton(
+            t("btn_telegram", user_id), 
+            callback_data="prompt_v2_telegram"
+        )],
+        [InlineKeyboardButton(
+            t("btn_conversational", user_id), 
+            callback_data="prompt_v3_conversational"
+        )],
+        [InlineKeyboardButton(
+            t("btn_stage_specific", user_id), 
+            callback_data="prompt_v4_stage_specific"
+        )],
+        [InlineKeyboardButton(
+            t("btn_conversation_mgmt", user_id), 
+            callback_data="prompt_v5_conversation_mgmt"
+        )]
+    ]
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.effective_message.reply_text(
+        welcome_message,
+        reply_markup=reply_markup,
+        parse_mode='HTML'
+    )
+
+# Localized status command
+async def handle_status_localized(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Status command with localization"""
+    
+    user_id = update.effective_user.id
+    session = get_user_session(user_id)  # Your session retrieval logic
+    
+    if not session:
+        await update.message.reply_text(
+            t("no_active_session", user_id)
+        )
+        return
+    
+    # Build localized status
+    status_parts = [
+        t("interview_status", user_id),
+        "",
+        t("current_stage", user_id, stage=session.current_stage),
+        t("duration_status", user_id, duration=session.duration_minutes),
+        t("question_depth", user_id, depth=session.question_depth),
+        t("engagement", user_id, level=session.engagement_level),
+        t("examples", user_id, count=session.examples_count),
+        "",
+        t("progress_title", user_id)
+    ]
+    
+    # Add stage progress indicators
+    for stage in session.stages:
+        if stage.name == session.current_stage:
+            indicator = t("current_stage_indicator", user_id, 
+                        stage=stage.display_name, completeness=stage.completeness)
+        elif stage.completed:
+            indicator = t("completed_stage_indicator", user_id,
+                        stage=stage.display_name, completeness=stage.completeness)
+        else:
+            indicator = t("pending_stage_indicator", user_id,
+                        stage=stage.display_name)
+        status_parts.append(indicator)
+    
+    status_message = "\n".join(status_parts)
+    await update.message.reply_text(status_message)
+
+# Dynamic language switching
+async def handle_language_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle /language command for switching languages"""
+    
+    user_id = update.effective_user.id
+    current_lang = localization.get_user_language(user_id)
+    
+    # Show current language and options
+    if current_lang == SupportedLanguage.ENGLISH:
+        current_display = "English"
+        other_option = "🇷🇺 Switch to Русский"
+        other_callback = "switch_ru"
+    else:
+        current_display = "Русский"
+        other_option = "🇺🇸 Switch to English"
+        other_callback = "switch_en"
+    
+    keyboard = [
+        [InlineKeyboardButton(other_option, callback_data=other_callback)],
+        [InlineKeyboardButton(
+            t("cancel_complete", user_id), 
+            callback_data="cancel_switch"
+        )]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    message = t("language_selection", user_id) + f"\n\n**Current:** {current_display}"
+    
+    await update.message.reply_text(message, reply_markup=reply_markup, parse_mode='Markdown')
+
+async def handle_language_switch(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle language switch callbacks"""
+    
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    
+    if query.data == "switch_en":
+        localization.set_user_language(user_id, SupportedLanguage.ENGLISH)
+        new_lang = "English"
+    elif query.data == "switch_ru":
+        localization.set_user_language(user_id, SupportedLanguage.RUSSIAN)
+        new_lang = "Русский"
+    elif query.data == "cancel_switch":
+        await query.edit_message_text(t("completion_cancelled", user_id))
+        return
+    
+    # Confirm switch in new language
+    confirmation = t("language_set", user_id, language=new_lang)
+    await query.edit_message_text(confirmation)
+
+# Integration with existing handlers
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler
+
+def add_localization_to_bot(app: Application):
+    """Add localization support to existing bot"""
+    
+    # Override start command with localization
+    app.add_handler(CommandHandler("start", handle_start_with_localization))
+    app.add_handler(CommandHandler("status", handle_status_localized))
+    app.add_handler(CommandHandler("language", handle_language_command))
+    
+    # Add language selection handlers
+    app.add_handler(CallbackQueryHandler(
+        handle_language_selection,
+        pattern=r"^lang_(en|ru)$"
+    ))
+    
+    app.add_handler(CallbackQueryHandler(
+        handle_language_switch,
+        pattern=r"^(switch_en|switch_ru|cancel_switch)$"
+    ))
+    
+    print("✅ Localization support added to bot")
+
+# Helper functions for custom translations
+def add_custom_translations(language_code: str, translations: dict):
+    """Add custom translations to the localization system"""
+    
+    if language_code not in localization.translations:
+        localization.translations[language_code] = {}
+    
+    localization.translations[language_code].update(translations)
+    
+    print(f"✅ Added {len(translations)} custom translations for {language_code}")
+
+# Example: Adding Spanish support
+spanish_translations = {
+    "welcome_greeting": "¡Hola {username}! Soy un entrevistador de IA especializado...",
+    "begin_interview": "🚀 Comenzar Entrevista",
+    "interview_complete": "🎉 ¡Entrevista Completa!",
+    # ... more translations
+}
+
+add_custom_translations("es", spanish_translations)
 
 ### Environment Configuration
 

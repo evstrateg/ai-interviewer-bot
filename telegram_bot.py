@@ -24,6 +24,13 @@ import anthropic
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, BotCommand
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
+# Voice processing imports (optional)
+try:
+    from voice_handler import VoiceMessageHandler, VoiceProcessingConfig, VoiceQuality
+    VOICE_PROCESSING_AVAILABLE = True
+except ImportError:
+    VOICE_PROCESSING_AVAILABLE = False
+
 # Configure logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -249,11 +256,33 @@ Recent Conversation History:
 class AIInterviewerBot:
     """Main AI Interviewer Telegram Bot"""
     
-    def __init__(self, telegram_token: str, anthropic_api_key: str):
+    def __init__(self, telegram_token: str, anthropic_api_key: str, assemblyai_api_key: Optional[str] = None):
         self.telegram_token = telegram_token
         self.prompt_manager = PromptManager()
         self.claude = ClaudeIntegration(anthropic_api_key)
         self.sessions: Dict[int, InterviewSession] = {}
+        
+        # Initialize voice processing if available and configured
+        self.voice_handler = None
+        if VOICE_PROCESSING_AVAILABLE and assemblyai_api_key:
+            try:
+                voice_config = VoiceProcessingConfig(
+                    assemblyai_api_key=assemblyai_api_key,
+                    max_file_size_mb=25,
+                    min_duration_seconds=0.5,
+                    max_duration_seconds=600,
+                    confidence_threshold=0.6,
+                    default_language="en",
+                    supported_languages=["en", "ru", "es", "fr", "de"],
+                    enable_auto_language_detection=True
+                )
+                self.voice_handler = VoiceMessageHandler(voice_config)
+                logger.info("Voice processing enabled with AssemblyAI")
+            except Exception as e:
+                logger.error(f"Failed to initialize voice processing: {e}")
+                self.voice_handler = None
+        elif assemblyai_api_key:
+            logger.warning("Voice processing requested but voice_handler module not available")
         
         # Build application
         self.application = Application.builder().token(telegram_token).build()
@@ -272,6 +301,12 @@ class AIInterviewerBot:
         
         # Message handlers
         self.application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, self.handle_message))
+        
+        # Voice message handlers (if voice processing is available)
+        if self.voice_handler:
+            self.application.add_handler(MessageHandler(filters.VOICE, self.handle_voice_message))
+            self.application.add_handler(MessageHandler(filters.AUDIO, self.handle_voice_message))
+            logger.info("Voice message handlers added")
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start command"""
@@ -485,6 +520,101 @@ Select your preferred style to begin!
         
         await update.message.reply_text(response_text, parse_mode='Markdown')
     
+    async def handle_voice_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle voice messages by transcribing and processing as text"""
+        if not self.voice_handler:
+            await update.message.reply_text(
+                "🎤 Voice messages are not supported in this configuration. Please use text messages."
+            )
+            return
+        
+        user_id = update.effective_user.id
+        
+        # Check if user has an active session
+        if user_id not in self.sessions:
+            await update.message.reply_text(
+                "🎤 Please start an interview first using /start to send voice messages."
+            )
+            return
+        
+        try:
+            # Show processing indicator
+            await context.bot.send_chat_action(chat_id=update.effective_chat.id, action='typing')
+            await update.message.reply_text(
+                "🎤 Processing your voice message... This may take a moment."
+            )
+            
+            # Process voice message
+            transcription_result = await self.voice_handler.process_voice_message(
+                update, context, session_data={'user_id': user_id}
+            )
+            
+            # Handle transcription result
+            if transcription_result.quality == VoiceQuality.FAILED:
+                error_message = self.voice_handler.format_transcription_response(transcription_result)
+                await update.message.reply_text(error_message)
+                return
+            
+            # Send transcription confirmation
+            transcription_message = self.voice_handler.format_transcription_response(transcription_result)
+            await update.message.reply_text(transcription_message, parse_mode='Markdown')
+            
+            # Process transcribed text as regular message
+            if transcription_result.text.strip():
+                # Update the message text to be the transcribed text for processing
+                # We'll simulate a text message with the transcribed content
+                session = self.sessions[user_id]
+                
+                # Add voice message metadata to session
+                voice_metadata = {
+                    'message_type': 'voice',
+                    'duration': transcription_result.duration_seconds,
+                    'confidence': transcription_result.confidence,
+                    'quality': transcription_result.quality.value,
+                    'language': transcription_result.language,
+                    'processing_time': transcription_result.processing_time_seconds
+                }
+                
+                # Add user message to history with voice metadata
+                session.add_message("user", transcription_result.text, voice_metadata)
+                
+                # Generate response
+                response_data = await self.claude.generate_interview_response(
+                    session, transcription_result.text, self.prompt_manager
+                )
+                
+                # Update session state from response metadata
+                if 'metadata' in response_data:
+                    metadata = response_data['metadata']
+                    session.question_depth = metadata.get('question_depth', session.question_depth)
+                    session.engagement_level = metadata.get('engagement_level', session.engagement_level)
+                    
+                    # Update stage completeness
+                    stage = response_data.get('interview_stage', session.current_stage.value)
+                    completeness = metadata.get('completeness', 0)
+                    session.stage_completeness[stage] = completeness
+                    
+                    # Check for stage transitions
+                    if completeness >= 80:
+                        await self._handle_stage_transition(session, update, response_data)
+                        return
+                
+                # Add response to history
+                session.add_message("assistant", response_data['response'], response_data.get('metadata'))
+                
+                # Send response to user
+                response_text = response_data['response']
+                if 'error' in response_data:
+                    response_text += f"\n\n*[Technical issue: {response_data['error']}]*"
+                
+                await update.message.reply_text(response_text, parse_mode='Markdown')
+            
+        except Exception as e:
+            logger.error(f"Voice message processing failed: {e}")
+            await update.message.reply_text(
+                "🎤 I encountered an error processing your voice message. Please try again or use text instead."
+            )
+    
     async def _handle_stage_transition(self, session: InterviewSession, update: Update, response_data: Dict):
         """Handle transition between interview stages"""
         current_stage_index = list(InterviewStage).index(session.current_stage)
@@ -660,6 +790,7 @@ def main():
     # Load configuration
     telegram_token = os.getenv('TELEGRAM_BOT_TOKEN')
     anthropic_api_key = os.getenv('ANTHROPIC_API_KEY')
+    assemblyai_api_key = os.getenv('ASSEMBLYAI_API_KEY')
     
     if not telegram_token or not anthropic_api_key:
         logger.error("Missing required environment variables:")
@@ -668,7 +799,16 @@ def main():
         return
     
     # Create and run bot
-    bot = AIInterviewerBot(telegram_token, anthropic_api_key)
+    bot = AIInterviewerBot(telegram_token, anthropic_api_key, assemblyai_api_key)
+    
+    # Log voice processing status
+    if bot.voice_handler:
+        logger.info("Bot initialized with voice processing enabled")
+    elif assemblyai_api_key:
+        logger.info("Bot initialized - voice processing disabled (dependencies missing)")
+    else:
+        logger.info("Bot initialized - voice processing disabled (no API key)")
+    
     bot.run()
 
 if __name__ == '__main__':

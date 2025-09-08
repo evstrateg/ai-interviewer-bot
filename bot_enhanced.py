@@ -191,13 +191,13 @@ class MetricsCollector:
 class EnhancedAIInterviewerBot(AIInterviewerBot):
     """Enhanced version with better error handling and monitoring"""
     
-    def __init__(self, telegram_token: str, anthropic_api_key: str):
+    def __init__(self, telegram_token: str, anthropic_api_key: str, assemblyai_api_key: Optional[str] = None):
         # Initialize session manager and metrics
         self.session_manager = SessionManager()
         self.metrics = MetricsCollector()
         
-        # Initialize parent class
-        super().__init__(telegram_token, anthropic_api_key)
+        # Initialize parent class with voice support
+        super().__init__(telegram_token, anthropic_api_key, assemblyai_api_key)
         
         # Override sessions with session manager
         self.sessions = self.session_manager.sessions
@@ -221,6 +221,15 @@ class EnhancedAIInterviewerBot(AIInterviewerBot):
                 interval=timedelta(hours=1),
                 first=timedelta(hours=1)
             )
+            
+            # Cleanup voice processing temp files every 6 hours (if voice processing enabled)
+            if self.voice_handler:
+                self.application.job_queue.run_repeating(
+                    self._voice_cleanup_task,
+                    interval=timedelta(hours=6),
+                    first=timedelta(hours=6)
+                )
+            
             logger.info("Periodic tasks scheduled successfully")
         else:
             logger.warning("Job queue not available. Periodic tasks disabled. Install with: pip install 'python-telegram-bot[job-queue]'")
@@ -236,8 +245,23 @@ class EnhancedAIInterviewerBot(AIInterviewerBot):
         """Periodic metrics logging task"""
         try:
             self.metrics.log_metrics()
+            
+            # Also log voice processing statistics if available
+            if self.voice_handler:
+                voice_stats = self.voice_handler.get_statistics()
+                logger.info("Voice processing metrics", **voice_stats)
+                
         except Exception as e:
             logger.error("Metrics task failed", error=str(e))
+    
+    async def _voice_cleanup_task(self, context):
+        """Periodic voice processing cleanup task"""
+        try:
+            if self.voice_handler:
+                await self.voice_handler.cleanup_periodic()
+                logger.info("Voice processing cleanup completed")
+        except Exception as e:
+            logger.error("Voice cleanup task failed", error=str(e))
     
     async def _start_interview(self, query, user_id: int, username: str, variant: PromptVariant):
         """Enhanced interview start with metrics"""
@@ -530,6 +554,20 @@ Use /reset to start a new interview or /metrics to see bot statistics.
 • Uptime: Since bot restart
 """
         
+        # Add voice processing metrics if available
+        if self.voice_handler:
+            voice_stats = self.voice_handler.get_statistics()
+            voice_text = f"""
+**Voice Processing:**
+• Messages: {voice_stats.get('messages_processed', 0)}
+• Successful: {voice_stats.get('successful_transcriptions', 0)}
+• Failed: {voice_stats.get('failed_transcriptions', 0)}
+• Success Rate: {voice_stats.get('success_rate', 0):.1%}
+• Avg Duration: {voice_stats.get('avg_audio_duration', 0):.1f}s
+• Avg Processing: {voice_stats.get('avg_processing_time', 0):.1f}s
+"""
+            metrics_text += voice_text
+        
         await update.message.reply_text(metrics_text, parse_mode='Markdown')
     
     async def complete_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -623,8 +661,9 @@ Use /reset to start a new interview or /metrics to see bot statistics.
 def main():
     """Main function with enhanced error handling"""
     try:
-        # Create and run enhanced bot
-        bot = EnhancedAIInterviewerBot(config.telegram_token, config.anthropic_api_key)
+        # Create and run enhanced bot with voice support
+        assemblyai_key = config.assemblyai_api_key if config.voice_processing_enabled else None
+        bot = EnhancedAIInterviewerBot(config.telegram_token, config.anthropic_api_key, assemblyai_key)
         
         # Add enhanced commands
         bot.application.add_handler(CommandHandler("metrics", bot.metrics_command))
@@ -632,7 +671,8 @@ def main():
         
         logger.info("Starting Enhanced AI Interviewer Bot...",
                    log_level=config.log_level,
-                   claude_model=config.claude_model)
+                   claude_model=config.claude_model,
+                   voice_processing=bool(bot.voice_handler))
         
         bot.run()
         

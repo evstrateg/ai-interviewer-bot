@@ -14,13 +14,20 @@ graph TB
     Bot --> SM[💾 Session Manager]
     Bot --> PM[📋 Prompt Manager]
     Bot --> MC[📊 Metrics Collector]
+    Bot --> VH[🎤 Voice Handler]
+    Bot --> LM[🌐 Localization Manager]
     
     %% Integration Layer
     Bot --> Claude[🧠 Claude API Integration]
     Claude --> Anthropic[☁️ Anthropic Claude Sonnet-4]
+    VH --> AssemblyAI[🔊 AssemblyAI Speech-to-Text]
+    VH --> AudioProc[🎵 Audio Processor]
     
     %% Data Layer
     SM --> FS[📁 File System Storage]
+    LM --> LangPref[🏷️ Language Preferences<br/>user_language_preferences.json]
+    VH --> TempAudio[🎵 Temporary Audio<br/>/tmp/ai_interviewer_audio/]
+    
     FS --> Sessions[💼 Active Sessions<br/>sessions/*.pkl]
     FS --> Archive[🗄️ Completed Sessions<br/>completed_sessions/*.json]
     FS --> Logs[📝 Application Logs<br/>logs/]
@@ -44,9 +51,22 @@ graph TB
         SM
         PM
         MC
+        VH
+        LM
+        AudioProc
         Claude
         Config
         FS
+    end
+    
+    %% External Dependencies
+    subgraph "External Dependencies"
+        direction TB
+        FFmpeg[🎶 FFmpeg<br/>Audio Processing]
+        Pydub[🎵 Pydub<br/>Audio Manipulation]
+        
+        AudioProc --> FFmpeg
+        AudioProc --> Pydub
     end
     
     %% External Services
@@ -69,7 +89,135 @@ graph TB
     class Redis,PostgreSQL optionalLayer
 ```
 
-## 2. Interview Flow Diagram
+## 2. Voice Processing Architecture
+
+```mermaid
+graph TD
+    %% User Input
+    User[👤 User] -->|🎤 Voice Message| TG[📱 Telegram Bot API]
+    TG -->|Voice File| Bot[🤖 AI Interviewer Bot]
+    
+    %% Voice Processing Pipeline
+    Bot --> VH[🎤 Voice Message Handler]
+    VH --> VPC[⚙️ Voice Processing Config]
+    VH --> AP[🎵 Audio Processor]
+    VH --> AAI[🔊 AssemblyAI Client]
+    
+    %% Audio Processing Steps
+    AP -->|1. Download| Download[📥 Download Voice<br/>Telegram → Local File]
+    Download -->|2. Convert| Convert[🔄 Convert & Optimize<br/>OGG/MP3 → WAV 16kHz]
+    Convert -->|3. Enhance| Enhance[✨ Audio Enhancement<br/>Noise Reduction<br/>Normalization]
+    
+    %% Transcription Process
+    Enhance --> AAI
+    AAI -->|4. Upload| Upload[📤 Upload to AssemblyAI]
+    Upload -->|5. Process| Process[⚙️ Speech-to-Text<br/>Language Detection<br/>Quality Analysis]
+    Process -->|6. Result| Result[📄 Transcription Result]
+    
+    %% Quality Assessment
+    Result --> QA[🎯 Quality Assessment]
+    QA -->|High Quality<br/>85%+ confidence| HighQ[✅ Auto-Accept<br/>Continue Interview]
+    QA -->|Medium Quality<br/>60-84% confidence| MedQ[⚠️ Accept with Notice<br/>Continue Interview]
+    QA -->|Low Quality<br/><60% confidence| LowQ[❌ Request Confirmation<br/>or Retry]
+    
+    %% Error Handling
+    QA -->|Processing Failed| Error[🚫 Error Handling]
+    Error --> Retry[🔄 Retry Options<br/>• Try Again<br/>• Use Text Input<br/>• Skip Question]
+    
+    %% Final Output
+    HighQ --> FinalOutput[📝 Formatted Response]
+    MedQ --> FinalOutput
+    LowQ -->|If Confirmed| FinalOutput
+    FinalOutput --> Interview[🎯 Continue Interview]
+    
+    %% Cleanup
+    Interview --> Cleanup[🧹 Cleanup Temp Files]
+    
+    %% Configuration Dependencies
+    subgraph "Configuration"
+        VPC --> MaxSize[📏 Max File Size: 25MB]
+        VPC --> MaxDuration[⏱️ Max Duration: 10min]
+        VPC --> Languages[🌐 Languages: EN/RU]
+        VPC --> Confidence[🎯 Min Confidence: 60%]
+    end
+    
+    %% External Services
+    subgraph "External Services"
+        AssemblyAPI[🔊 AssemblyAI API]
+        AAI --> AssemblyAPI
+    end
+    
+    %% Temporary Storage
+    subgraph "Temporary Storage"
+        TempDir[📁 /tmp/ai_interviewer_audio/]
+        Download --> TempDir
+        Convert --> TempDir
+        Cleanup --> TempDir
+    end
+```
+
+## 3. Localization Architecture
+
+```mermaid
+graph TD
+    %% User Language Detection
+    User[👤 User] -->|/start| Bot[🤖 AI Interviewer Bot]
+    Bot --> LangDetect[🔍 Language Detection]
+    
+    %% Detection Sources
+    LangDetect --> TelegramLocale[📱 Telegram Locale<br/>user.language_code]
+    LangDetect --> UserPrefs[💾 Stored Preferences<br/>user_language_preferences.json]
+    LangDetect --> TextAnalysis[📝 Text Pattern Analysis<br/>Cyrillic detection]
+    LangDetect --> DefaultLang[🌐 Default: English]
+    
+    %% Language Manager
+    Bot --> LM[🌐 Localization Manager]
+    LM --> TranslationDict[📚 Translation Dictionary]
+    
+    %% Translation Storage
+    TranslationDict --> EnglishTrans[🇺🇸 English Translations<br/>Base language]
+    TranslationDict --> RussianTrans[🇷🇺 Russian Translations<br/>Полные переводы]
+    
+    %% Dynamic Translation Process
+    LM --> GetText[🔤 Get Text Function]
+    GetText -->|1. Lookup| Lookup[🔍 Key Lookup<br/>e.g., "welcome_greeting"]
+    Lookup -->|2. Format| Format[📝 String Formatting<br/>{username}, {stage}]
+    Format -->|3. Fallback| Fallback[🔄 Fallback to English<br/>if translation missing]
+    
+    %% User Interface Elements
+    GetText --> BotMessages[💬 Bot Messages]
+    GetText --> Commands[⚙️ Command Descriptions]
+    GetText --> Buttons[🔘 Inline Keyboards]
+    GetText --> Errors[❌ Error Messages]
+    GetText --> Status[📊 Status Updates]
+    
+    %% Language Switching
+    LM --> LanguageCmd[🔄 /language Command]
+    LanguageCmd --> LanguageSelection[🌐 Language Selection Menu]
+    LanguageSelection -->|Update| UserPrefs
+    
+    %% Persistent Storage
+    UserPrefs --> SavePrefs[💾 Save Preferences]
+    SavePrefs --> PrefsFile[📄 user_language_preferences.json]
+    
+    %% Integration with Other Components
+    LM --> VoiceHandler[🎤 Voice Handler<br/>Localized responses]
+    LM --> SessionManager[💾 Session Manager<br/>Localized stage names]
+    LM --> PromptManager[📋 Prompt Manager<br/>Localized prompts]
+    
+    %% Real-time Language Application
+    subgraph "Real-time Application"
+        RealTime[⚡ Real-time Translation]
+        RealTime --> WelcomeMsg[👋 Welcome Messages]
+        RealTime --> StageTransitions[🎯 Stage Transitions]
+        RealTime --> InterviewComplete[✅ Interview Completion]
+        RealTime --> HelpTexts[❓ Help & Instructions]
+    end
+    
+    GetText --> RealTime
+```
+
+## 4. Interview Flow Diagram
 
 ```mermaid
 flowchart TD
@@ -645,3 +793,216 @@ Each diagram includes:
 - **Scalable architecture** suitable for different deployment scenarios
 
 The diagrams are designed to be self-documenting and can be maintained alongside code changes to keep architecture documentation current.
+
+## 7. Enhanced Data Flow with Voice and Localization
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant TG as Telegram Bot API
+    participant Bot as AI Interviewer Bot
+    participant LM as Localization Manager
+    participant VH as Voice Handler  
+    participant AP as Audio Processor
+    participant AAI as AssemblyAI
+    participant SM as Session Manager
+    participant Claude as Claude API
+    
+    %% Initial Setup with Language Detection
+    User->>TG: /start
+    TG->>Bot: start command
+    Bot->>LM: detect user language
+    LM->>LM: check Telegram locale
+    LM->>LM: check stored preferences
+    LM->>Bot: detected language
+    Bot->>LM: get welcome text
+    LM->>Bot: localized welcome
+    Bot->>TG: language selection menu
+    TG->>User: display language options
+    
+    %% Language Selection
+    User->>TG: select language
+    TG->>Bot: language callback
+    Bot->>LM: set user language
+    LM->>LM: save preference to file
+    Bot->>LM: get localized prompt options
+    LM->>Bot: localized prompts
+    Bot->>TG: interview style options
+    TG->>User: display options
+    
+    %% Interview Start
+    User->>TG: select interview style
+    TG->>Bot: style selection
+    Bot->>SM: create session
+    SM->>SM: initialize session data
+    Bot->>LM: get stage transition text
+    LM->>Bot: localized stage text
+    Bot->>TG: begin interview
+    TG->>User: interview started
+    
+    %% Voice Message Processing Flow
+    loop Voice Message Processing
+        User->>TG: 🎤 voice message
+        TG->>Bot: voice file
+        Bot->>VH: process voice message
+        VH->>AP: download voice file
+        AP->>AP: save to temp directory
+        VH->>AP: convert & optimize audio
+        AP->>AP: OGG -> WAV conversion
+        AP->>AP: noise reduction & enhancement
+        VH->>AAI: transcribe audio
+        AAI->>AAI: speech-to-text processing
+        AAI->>VH: transcription result
+        VH->>VH: quality assessment
+        
+        alt High Quality Transcription
+            VH->>Bot: transcribed text
+            Bot->>LM: get success response
+            LM->>Bot: localized response
+            Bot->>TG: 🎤✨ transcription confirmed
+        else Medium Quality
+            VH->>Bot: transcribed text with warning
+            Bot->>LM: get medium quality response
+            LM->>Bot: localized warning
+            Bot->>TG: 🎤 transcription with notice
+        else Low Quality
+            VH->>Bot: low confidence result
+            Bot->>LM: get confirmation request
+            LM->>Bot: localized confirmation
+            Bot->>TG: 🎤⚠️ confirm transcription
+            TG->>User: confirmation buttons
+            User->>TG: confirm/retry
+        end
+        
+        VH->>AP: cleanup temp files
+        AP->>AP: delete temporary files
+    end
+    
+    %% Standard Interview Flow with Localization
+    loop Interview Conversation
+        User->>TG: text or confirmed voice response
+        TG->>Bot: user message
+        Bot->>SM: update session
+        Bot->>Claude: send prompt + context
+        Claude->>Bot: AI response
+        Bot->>SM: save response
+        Bot->>LM: get stage progress text
+        LM->>Bot: localized progress
+        Bot->>TG: AI interviewer response
+        TG->>User: display response
+        
+        %% Stage Transition
+        alt Stage Complete
+            Bot->>LM: get stage completion text
+            LM->>Bot: localized completion
+            Bot->>TG: stage transition message
+            Bot->>LM: get next stage text
+            LM->>Bot: localized next stage
+            Bot->>TG: next stage introduction
+        end
+    end
+    
+    %% Interview Completion
+    Bot->>SM: mark session complete
+    Bot->>LM: get completion message
+    LM->>Bot: localized completion
+    Bot->>TG: interview complete
+    TG->>User: completion summary
+```
+
+## 8. Deployment Architecture with New Dependencies
+
+```mermaid
+graph TB
+    subgraph "Production Environment"
+        direction TB
+        
+        subgraph "Docker Container: ai-interviewer-bot"
+            Bot[🤖 AI Interviewer Bot<br/>Python 3.11]
+            VH[🎤 Voice Handler]
+            LM[🌐 Localization Manager]
+            SM[💾 Session Manager]
+            
+            Bot --> VH
+            Bot --> LM
+            Bot --> SM
+        end
+        
+        subgraph "System Dependencies"
+            FFmpeg[🎶 FFmpeg<br/>Audio Processing]
+            Python[🐍 Python Packages<br/>assemblyai, pydub, structlog]
+        end
+        
+        subgraph "External Services"
+            TelegramAPI[📱 Telegram Bot API]
+            ClaudeAPI[🧠 Anthropic Claude API]
+            AssemblyAPI[🔊 AssemblyAI API]
+        end
+        
+        subgraph "Storage Layer"
+            Sessions[📁 Session Files<br/>sessions/]
+            Archive[🗄️ Completed Interviews<br/>completed_sessions/]
+            TempAudio[🎵 Temp Audio<br/>/tmp/ai_interviewer_audio/]
+            LangPrefs[🏷️ Language Preferences<br/>user_language_preferences.json]
+            Logs[📝 Application Logs<br/>logs/]
+        end
+        
+        subgraph "Configuration"
+            EnvVars[🔑 Environment Variables<br/>TELEGRAM_BOT_TOKEN<br/>ANTHROPIC_API_KEY<br/>ASSEMBLYAI_API_KEY]
+            AppConfig[⚙️ Application Config<br/>Voice Processing<br/>Localization Settings]
+        end
+    end
+    
+    %% Connections
+    Bot <--> TelegramAPI
+    Bot <--> ClaudeAPI
+    VH <--> AssemblyAPI
+    VH --> FFmpeg
+    VH --> Sessions
+    VH --> TempAudio
+    LM --> LangPrefs
+    SM --> Sessions
+    SM --> Archive
+    Bot --> Logs
+    
+    %% Configuration connections
+    EnvVars --> Bot
+    AppConfig --> Bot
+    AppConfig --> VH
+    AppConfig --> LM
+    
+    %% Styling
+    classDef external fill:#e1f5fe
+    classDef storage fill:#f3e5f5
+    classDef config fill:#fff3e0
+    classDef container fill:#e8f5e8
+    
+    class TelegramAPI,ClaudeAPI,AssemblyAPI external
+    class Sessions,Archive,TempAudio,LangPrefs,Logs storage
+    class EnvVars,AppConfig config
+    class Bot,VH,LM,SM container
+```
+
+### Enhanced Features Documentation
+
+These updated diagrams now include:
+
+**Voice Processing Features**:
+- Complete audio processing pipeline from Telegram voice messages to transcribed text
+- Quality assessment and user confirmation workflows
+- Temporary file management and cleanup processes
+- AssemblyAI integration with configurable thresholds
+
+**Localization Features**:
+- Automatic language detection from Telegram locale
+- Persistent user language preferences
+- Real-time translation for all bot interactions
+- Fallback mechanisms for missing translations
+
+**System Integration**:
+- Updated deployment architecture with new dependencies
+- Enhanced data flow showing voice and localization integration
+- Configuration management for new features
+- Storage requirements for temporary audio and language preferences
+
+The architecture supports seamless switching between text and voice inputs while maintaining full localization across English and Russian languages.

@@ -6,6 +6,8 @@
 
 - [Getting Started](#getting-started)
 - [Understanding Interview Styles](#understanding-interview-styles)
+- [Language Support](#language-support)
+- [Voice Messages](#voice-messages)
 - [The 9-Stage Interview Process](#the-9-stage-interview-process)
 - [Managing Your Interview Session](#managing-your-interview-session)
 - [Understanding Bot Responses](#understanding-bot-responses)
@@ -19,8 +21,12 @@
 
 1. **Find the Bot**: Contact `@YourBotUsername` on Telegram
 2. **Initialize**: Send `/start` to begin
-3. **Choose Style**: Select from 5 interviewer personalities
-4. **Begin**: Click "🚀 Begin Interview" to start
+3. **Select Language**: Choose between 🇺🇸 English or 🇷🇺 Russian
+   - The bot auto-detects your Telegram language preference
+   - You can manually select your preferred language
+   - Your choice is saved for future sessions
+4. **Choose Style**: Select from 5 interviewer personalities
+5. **Begin**: Click "🚀 Begin Interview" to start
 
 ### Quick Commands Reference
 
@@ -31,6 +37,7 @@
 | `/reset` | Reset session | Start over completely |
 | `/help` | Show help | Need guidance |
 | `/metrics` | View statistics | Check bot performance |
+| `/language` | Change language | Switch between English/Russian |
 
 ## 🎭 Understanding Interview Styles
 
@@ -80,6 +87,185 @@ Choose the style that best matches your communication preferences:
 
 **Example Questions**:
 > "I notice we haven't fully explored your technical background yet. Let me adjust our approach to make sure we capture everything..."
+
+## 🌐 Language Support
+
+The AI Interviewer Bot provides full support for multiple languages, making professional interviews accessible to users worldwide.
+
+### Supported Languages
+
+- **🇺🇸 English**: Complete interface with native English responses
+- **🇷🇺 Russian**: Полная поддержка русского языка с native ответами
+
+### Language Selection
+
+**Automatic Detection**:
+- The bot automatically detects your preferred language from your Telegram settings
+- No manual configuration needed for most users
+- Language preference is remembered for future interviews
+
+**Manual Selection**:
+1. Send `/start` to the bot
+2. If auto-detection doesn't work, you'll see language options
+3. Choose your preferred language:
+   - 🇺🇸 **English** - Full English interface
+   - 🇷🇺 **Русский** - Полный русский интерфейс
+
+**Changing Languages**:
+- Use `/language` command anytime to switch languages
+- Use `/reset` and `/start` to begin with a different language
+- Language changes apply immediately to all bot responses
+
+### What's Localized
+
+**Complete Localization Includes**:
+- ✅ All bot messages and responses
+- ✅ Interview stage names and descriptions  
+- ✅ Command descriptions and help text
+- ✅ Error messages and notifications
+- ✅ Progress indicators and status updates
+- ✅ Interview completion summaries
+
+**Examples**:
+
+**English**:
+```
+🤖 AI Professional Knowledge Interviewer
+
+Hello John! I'm an AI interviewer specialized in extracting 
+deep professional insights through structured conversations.
+
+🚀 Begin Interview
+```
+
+**Russian**:
+```
+🤖 ИИ Интервьюер для Извлечения Профессиональных Знаний
+
+Привет, Иван! Я ИИ-интервьюер, специализирующийся на извлечении 
+глубоких профессиональных инсайтов через структурированные беседы.
+
+🚀 Начать Интервью
+```
+
+## 🎤 Voice Messages
+
+Transform your interview experience with high-quality voice message support. Speak naturally and let the bot transcribe your responses automatically.
+
+### Voice Message Features
+
+**🎯 High-Quality Transcription**:
+- Powered by AssemblyAI's advanced speech-to-text
+- Optimized for professional interviews and technical discussions
+- Supports both English and Russian speech recognition
+
+**⚡ Real-Time Processing**:
+- Audio automatically optimized for best transcription quality
+- Fast processing with transcription confidence indicators
+- Seamless integration with interview flow
+
+**🔧 Smart Audio Processing**:
+- Automatic noise reduction and audio enhancement
+- Support for multiple audio formats (OGG, MP3, M4A, WAV)
+- Voice messages up to 10 minutes long
+
+### How to Use Voice Messages
+
+1. **Record Your Message**:
+   - Hold the microphone button in Telegram
+   - Speak clearly and naturally
+   - Release to send (max 10 minutes)
+
+2. **Processing**:
+   - Bot shows "typing..." while processing
+   - Audio is automatically optimized
+   - Transcription happens in real-time
+
+3. **Transcription Result**:
+   ```
+   🎤✨ Voice Message Transcribed:
+   
+   I'm a senior software engineer with 8 years of experience 
+   in full-stack development, specializing in Python and React.
+   ```
+
+4. **Continue Interview**:
+   - Bot uses transcribed text as your response
+   - Interview continues seamlessly
+   - Quality indicators show transcription confidence
+
+### Voice Quality Indicators
+
+**🎤✨ High Quality (85%+ confidence)**:
+- Excellent transcription accuracy
+- Ready to proceed with interview
+- No user action needed
+
+**🎤 Medium Quality (60-84% confidence)**:
+- Good transcription with minor potential errors
+- Interview continues normally
+- Consider speaking more clearly for future messages
+
+**🎤⚠️ Low Quality (Below 60% confidence)**:
+- Transcription may have errors
+- Bot asks for confirmation:
+  ```
+  🎤⚠️ Voice Message Transcribed (Low Confidence):
+  
+  I work in software development for about 5 years
+  
+  Is this correct? (Confidence: 45%)
+  ✅ Correct    🔄 Try Again
+  ```
+
+### Voice Message Tips
+
+**For Best Results**:
+- 🎯 Speak clearly and at moderate pace
+- 🔇 Use quiet environment with minimal background noise
+- 📱 Hold phone close to your mouth (not too close)
+- ⏱️ Keep messages focused - break long thoughts into shorter segments
+- 🗣️ Use your natural speaking voice
+
+**Supported Scenarios**:
+- ✅ Technical explanations and detailed responses
+- ✅ Professional terminology and jargon
+- ✅ Multi-language responses (English/Russian)
+- ✅ Numbers, dates, and specific examples
+- ✅ Long-form explanations (up to 10 minutes)
+
+**When to Use Text Instead**:
+- Very noisy environment
+- Highly technical terms or acronyms
+- When privacy is a concern
+- Complex formatting or special characters
+
+### Voice Troubleshooting
+
+**Common Issues**:
+
+1. **"Voice message too short"**:
+   - Record for at least 1 second
+   - Ensure you're actually speaking
+
+2. **"Couldn't process audio format"**:
+   - Try recording again
+   - Check if microphone is working
+
+3. **Poor transcription quality**:
+   - Move to quieter location
+   - Speak more clearly and slowly
+   - Try shorter, more focused messages
+
+4. **"Voice processing failed"**:
+   - Check internet connection
+   - Try again in a few moments
+   - Use text as alternative
+
+**Recovery Options**:
+- 🔄 **Try Again**: Re-record your message
+- 💬 **Use Text**: Switch to typing your response
+- ✅ **Confirm**: Accept low-confidence transcription
 
 ## 📊 The 9-Stage Interview Process
 
@@ -428,6 +614,36 @@ A: No separate app needed - works through Telegram on any device.
 
 **Q: What if the bot seems to have technical issues?**
 A: Report issues to the administrator with context about what happened.
+
+### Language and Voice Questions
+
+**Q: How do I change the bot's language?**
+A: Use the `/language` command or reset with `/reset` and `/start` to select a new language.
+
+**Q: Does the bot remember my language preference?**
+A: Yes, once you select a language, it's saved for all future interviews.
+
+**Q: Can I use voice messages in Russian?**
+A: Yes! Voice transcription works for both English and Russian speech.
+
+**Q: What if voice transcription is wrong?**
+A: If transcription confidence is low, the bot will ask you to confirm or try again. You can also type corrections.
+
+**Q: Why can't the bot process my voice message?**
+A: Common reasons include:
+- Voice message too short (less than 1 second)
+- Poor audio quality or background noise
+- Unsupported audio format
+- Network connectivity issues
+
+**Q: How long can voice messages be?**
+A: Up to 10 minutes per message. For better accuracy, shorter messages (1-2 minutes) are recommended.
+
+**Q: Does voice processing work offline?**
+A: No, voice processing requires internet connection for transcription services.
+
+**Q: What languages are supported for voice?**
+A: Currently English and Russian. More languages may be added based on user demand.
 
 ## 📞 Getting Help
 

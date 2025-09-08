@@ -15,6 +15,8 @@
 - **🧠 Claude Sonnet-4 Integration**: Advanced AI with structured JSON responses  
 - **💾 Intelligent Session Management**: Persistent sessions with automatic recovery
 - **📊 Real-time Analytics**: Progress tracking and performance monitoring
+- **🌐 Multilingual Support**: Full English and Russian localization
+- **🎤 Voice Message Processing**: AssemblyAI speech-to-text integration
 - **🐳 Production Ready**: Docker deployment with scaling support
 - **🔒 Enterprise Security**: Comprehensive error handling and data protection
 - **⚡ High Performance**: Optimized for concurrent users and fast responses
@@ -58,6 +60,8 @@ Choose from 5 carefully crafted interviewer styles, each optimized for different
 - **📈 Analytics Engine**: Built-in metrics collection and performance monitoring
 - **⚡ Concurrent Users**: Support for multiple simultaneous interviews
 - **🎯 Adaptive Questioning**: Dynamic question depth based on user responses
+- **🌐 Intelligent Localization**: Automatic language detection and switching
+- **🎤 Voice Message Support**: High-quality speech-to-text transcription
 
 ### 🛠 Technical Features
 
@@ -67,12 +71,16 @@ Choose from 5 carefully crafted interviewer styles, each optimized for different
 - **🧪 Testing Suite**: Comprehensive unit and integration tests
 - **🔒 Security First**: Input validation, rate limiting, secure storage
 - **📱 Cross-Platform**: Works on Linux, macOS, Windows, and cloud platforms
+- **🎵 Audio Processing**: Advanced audio optimization with pydub and ffmpeg
+- **🔄 Multi-language APIs**: Comprehensive localization framework
 
 ## 📋 Prerequisites
 
 1. **Telegram Bot Token**: Get from [@BotFather](https://t.me/botfather)
 2. **Anthropic API Key**: Get from [Anthropic Console](https://console.anthropic.com/)
-3. **Python 3.11+** or **Docker**
+3. **AssemblyAI API Key** (for voice messages): Get from [AssemblyAI Console](https://www.assemblyai.com/)
+4. **Python 3.11+** or **Docker**
+5. **FFmpeg** (for audio processing): Required for voice message support
 
 ## ⚡ Quick Start
 
@@ -87,6 +95,7 @@ cp .env.example .env
 # Add your API keys to .env file
 echo "TELEGRAM_BOT_TOKEN=your_bot_token" >> .env
 echo "ANTHROPIC_API_KEY=your_claude_key" >> .env
+echo "ASSEMBLYAI_API_KEY=your_assemblyai_key" >> .env
 
 # Launch immediately
 docker-compose up -d
@@ -115,12 +124,22 @@ cp .env.example .env
 # Required
 TELEGRAM_BOT_TOKEN=your_telegram_bot_token_from_botfather
 ANTHROPIC_API_KEY=your_anthropic_api_key
+ASSEMBLYAI_API_KEY=your_assemblyai_api_key
 
 # Optional: Advanced configuration
 BOT_USERNAME=your_bot_username
 LOG_LEVEL=INFO
 SESSION_TIMEOUT_MINUTES=180
 CLAUDE_MODEL=claude-3-5-sonnet-20241022
+
+# Voice Processing Configuration
+VOICE_PROCESSING_ENABLED=true
+VOICE_MAX_DURATION_SECONDS=600
+VOICE_QUALITY_THRESHOLD=0.6
+
+# Localization Configuration
+DEFAULT_LANGUAGE=en
+AUTO_DETECT_LANGUAGE=true
 ```
 
 ```bash
@@ -213,14 +232,54 @@ cp .env.example .env
 ### Starting an Interview
 
 1. **Start conversation**: Send `/start` to the bot
-2. **Choose style**: Select from 5 interview approaches:
+2. **Select language**: Choose between 🇺🇸 English or 🇷🇺 Russian (auto-detected from Telegram locale)
+3. **Choose style**: Select from 5 interview approaches:
    - 🎯 **Master Interviewer**: Comprehensive and systematic
    - 📱 **Telegram Optimized**: Mobile-friendly, concise messages
    - 💬 **Conversational Balance**: Natural flow with systematic coverage
    - 🎪 **Stage Specific**: Detailed approach for each stage
    - 🧠 **Conversation Management**: Advanced recovery and adaptation
 
-3. **Begin interview**: Click "🚀 Begin Interview" and start responding
+4. **Begin interview**: Click "🚀 Begin Interview" and start responding
+
+### Language Support
+
+The bot supports **full localization** in:
+- 🇺🇸 **English**: Complete interface and responses
+- 🇷🇺 **Russian**: Полная локализация интерфейса и ответов
+
+**Language Detection**:
+- Automatic detection from your Telegram locale
+- Manual language selection available
+- Persistent language preferences
+- All bot messages, commands, and responses localized
+
+### Voice Message Support 🎤
+
+Send voice messages in any supported language and the bot will:
+
+**Features**:
+- 🎯 **High-Quality Transcription**: AssemblyAI-powered speech-to-text
+- 🌍 **Multi-Language**: English and Russian voice recognition
+- ⚡ **Real-Time Processing**: Fast audio conversion and transcription
+- 🔧 **Auto-Optimization**: Audio enhancement for better accuracy
+- 📊 **Quality Indicators**: Confidence scores and transcription quality
+
+**Usage**:
+1. Record and send a voice message (up to 10 minutes)
+2. Bot processes and transcribes your message
+3. Continues interview with transcribed text
+4. Quality indicators show transcription confidence
+
+**Supported Formats**: OGG, MP3, M4A, WAV, WebM, Opus
+
+**Example Voice Response**:
+```
+🎤✨ Voice Message Transcribed:
+
+I'm a senior software engineer with 8 years of experience 
+in full-stack development, specializing in Python and React.
+```
 
 ### Available Commands
 
@@ -412,6 +471,7 @@ Session State = {
 |----------|----------|---------|-------------|
 | `TELEGRAM_BOT_TOKEN` | ✅ | - | Telegram bot token from @BotFather |
 | `ANTHROPIC_API_KEY` | ✅ | - | Claude API key from Anthropic Console |
+| `ASSEMBLYAI_API_KEY` | ✅* | - | AssemblyAI API key for voice processing |
 | `BOT_USERNAME` | ❌ | - | Bot username for logging |
 | `BOT_NAME` | ❌ | AI Interviewer | Display name for the bot |
 | `LOG_LEVEL` | ❌ | INFO | Logging level (DEBUG, INFO, WARNING, ERROR) |
@@ -421,6 +481,27 @@ Session State = {
 | `CLAUDE_MODEL` | ❌ | claude-3-5-sonnet-20241022 | Claude model to use |
 | `CLAUDE_MAX_TOKENS` | ❌ | 1000 | Max tokens per response |
 | `CLAUDE_TEMPERATURE` | ❌ | 0.7 | Response creativity (0.0-1.0) |
+
+#### 🎤 Voice Processing Configuration
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `VOICE_PROCESSING_ENABLED` | ❌ | true | Enable/disable voice message processing |
+| `VOICE_MAX_DURATION_SECONDS` | ❌ | 600 | Maximum voice message duration (10 min) |
+| `VOICE_MAX_FILE_SIZE_MB` | ❌ | 25 | Maximum voice file size |
+| `VOICE_QUALITY_THRESHOLD` | ❌ | 0.6 | Minimum transcription confidence |
+| `VOICE_CONCURRENT_REQUESTS` | ❌ | 3 | Max concurrent AssemblyAI requests |
+| `VOICE_AUTO_LANGUAGE_DETECTION` | ❌ | true | Enable automatic language detection |
+
+#### 🌐 Localization Configuration
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DEFAULT_LANGUAGE` | ❌ | en | Default language (en/ru) |
+| `AUTO_DETECT_LANGUAGE` | ❌ | true | Auto-detect from Telegram locale |
+| `FORCE_LANGUAGE_SELECTION` | ❌ | false | Always show language selection |
+
+*AssemblyAI API key is required only if voice processing is enabled
 
 ### Interview Prompt Variants
 
@@ -530,11 +611,63 @@ environment:
    - Reduce `MAX_CONVERSATION_HISTORY`
    - Enable session cleanup
    - Monitor active sessions
+   - Clean up temporary voice files
 
 2. **Slow responses**:
    - Check internet connection
    - Verify Claude API status
    - Review `CLAUDE_MAX_TOKENS` setting
+   - Check AssemblyAI API performance
+
+### Voice Message Issues
+
+1. **Voice transcription failures**:
+   ```bash
+   # Check AssemblyAI API key
+   curl -H "authorization: YOUR_ASSEMBLYAI_KEY" \
+        https://api.assemblyai.com/v2/transcript
+   
+   # Verify audio dependencies
+   ffmpeg -version
+   pip show pydub assemblyai
+   ```
+
+2. **Poor transcription quality**:
+   - Speak clearly and slowly
+   - Use quiet environment
+   - Check microphone quality
+   - Reduce background noise
+   - Keep messages under 10 minutes
+
+3. **Voice processing errors**:
+   ```bash
+   # Check temp directory permissions
+   ls -la /tmp/ai_interviewer_audio/
+   
+   # Monitor voice processing logs
+   docker-compose logs -f ai-interviewer-bot | grep voice
+   ```
+
+### Language Issues
+
+1. **Wrong language detected**:
+   - Set Telegram language preference
+   - Use manual language selection
+   - Check locale settings: Settings → Language
+
+2. **Mixed language responses**:
+   - Reset session with `/reset`
+   - Manually select language in bot
+   - Clear language preferences
+
+3. **Missing translations**:
+   ```bash
+   # Check localization files
+   python -c "from localization import localization; print(localization.get_supported_languages())"
+   
+   # Verify language preference storage
+   ls user_language_preferences.json
+   ```
 
 ## 🧪 Development
 
