@@ -73,6 +73,7 @@ Voice Processing Integration Example
 """
 
 import os
+import assemblyai as aai
 from voice_handler import (
     VoiceMessageHandler, 
     VoiceProcessingConfig,
@@ -81,19 +82,31 @@ from voice_handler import (
 from telegram import Update
 from telegram.ext import ContextTypes
 
-# Configure voice processing
+# Configure voice processing with new AssemblyAI SDK
 def setup_voice_processing():
-    """Set up voice message processing"""
+    """Set up voice message processing with advanced features"""
     
-    # Basic configuration
+    # Initialize AssemblyAI SDK
+    aai.settings.api_key = os.getenv('ASSEMBLYAI_API_KEY')
+    
+    # Advanced configuration with new features
     voice_config = VoiceProcessingConfig(
         assemblyai_api_key=os.getenv('ASSEMBLYAI_API_KEY'),
-        max_file_size_mb=25,  # AssemblyAI limit
-        max_duration_seconds=600,  # 10 minutes
+        max_file_size_mb=25,  # AssemblyAI limit (50MB for Pro)
+        max_duration_seconds=600,  # No limit with streaming
         confidence_threshold=0.6,  # Minimum confidence for auto-acceptance
         default_language="en",
-        supported_languages=["en", "ru"],
-        enable_auto_language_detection=True
+        supported_languages=["en", "ru", "es", "fr", "de", "zh", "ja"],  # 100+ supported
+        enable_auto_language_detection=True,
+        
+        # New Advanced Features
+        enable_speaker_labels=True,
+        enable_pii_redaction=True,
+        enable_sentiment_analysis=True,
+        enable_topic_detection=True,
+        enable_content_safety=True,
+        enable_summarization=True,
+        enable_auto_chapters=True
     )
     
     # Create voice handler

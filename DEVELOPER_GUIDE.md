@@ -52,7 +52,7 @@ pip install -r requirements.txt
 pip install pytest pytest-asyncio black flake8 mypy
 
 # 5. Install voice processing dependencies
-pip install assemblyai pydub
+pip install assemblyai>=0.30.0 pydub>=0.25.1
 
 # 6. Verify FFmpeg installation (required for audio processing)
 ffmpeg -version || echo "Please install FFmpeg for voice processing"
@@ -617,12 +617,13 @@ class SessionAnalytics:
 
 ## 🎤 Voice Processing Development
 
-### Voice Handler Architecture
+### Voice Handler Architecture (Updated SDK)
 
-The voice processing system consists of three main components:
+The voice processing system uses the latest AssemblyAI SDK with enterprise features:
 
 ```python
-# voice_handler.py - Core Components
+# voice_handler.py - Core Components with New SDK
+import assemblyai as aai
 from voice_handler import (
     VoiceMessageHandler,
     VoiceProcessingConfig, 
@@ -631,18 +632,28 @@ from voice_handler import (
     create_voice_handler
 )
 
-# Configuration
+# Initialize AssemblyAI SDK
+aai.settings.api_key = "your_api_key"
+
+# Configuration with Advanced Features
 config = VoiceProcessingConfig(
     assemblyai_api_key="your_api_key",
     max_file_size_mb=25,
     max_duration_seconds=600,
     confidence_threshold=0.6,
     default_language="en",
-    supported_languages=["en", "ru"],
-    enable_auto_language_detection=True
+    supported_languages=["en", "ru", "es", "fr", "de"],  # 100+ supported
+    enable_auto_language_detection=True,
+    # New Advanced Features
+    enable_speaker_labels=True,
+    enable_pii_redaction=True,
+    enable_sentiment_analysis=True,
+    enable_topic_detection=True,
+    enable_content_safety=True,
+    enable_summarization=True
 )
 
-# Create handler
+# Create handler with enhanced capabilities
 voice_handler = VoiceMessageHandler(config)
 ```
 
