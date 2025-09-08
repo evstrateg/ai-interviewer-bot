@@ -26,7 +26,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQu
 
 # Voice processing imports (optional)
 try:
-    from voice_handler import VoiceMessageHandler, VoiceProcessingConfig, VoiceQuality
+    from src.handlers.voice_handler import VoiceMessageHandler, VoiceProcessingConfig, VoiceQuality
     VOICE_PROCESSING_AVAILABLE = True
 except ImportError:
     VOICE_PROCESSING_AVAILABLE = False

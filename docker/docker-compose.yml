@@ -3,8 +3,8 @@ version: '3.8'
 services:
   ai-interviewer-bot:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: docker/Dockerfile
     container_name: ai-interviewer-bot
     restart: unless-stopped
     
@@ -13,7 +13,7 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       
-      # Optional configuration
+      # Optional configuration with updated defaults
       - BOT_USERNAME=${BOT_USERNAME:-}
       - BOT_NAME=${BOT_NAME:-AI Interviewer}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
@@ -24,11 +24,19 @@ services:
       - CLAUDE_MAX_TOKENS=${CLAUDE_MAX_TOKENS:-1000}
       - CLAUDE_TEMPERATURE=${CLAUDE_TEMPERATURE:-0.7}
       
+      # Voice processing (optional)
+      - ASSEMBLYAI_API_KEY=${ASSEMBLYAI_API_KEY:-}
+      
+      # Package-specific environment
+      - PYTHONPATH=/app
+      
     volumes:
-      # Persist session data and logs
-      - ./data/sessions:/app/sessions
-      - ./data/completed_sessions:/app/completed_sessions  
-      - ./data/logs:/app/logs
+      # Persist session data and logs - updated paths for new structure
+      - ../data/sessions:/app/data/sessions
+      - ../data/completed_sessions:/app/data/completed_sessions  
+      - ../data/logs:/app/data/logs
+      # Environment configuration
+      - ../.env:/app/.env:ro
       
     # Optional: Health check endpoint
     # ports:

@@ -28,9 +28,10 @@ class TestRunner:
     """Enhanced test runner for AssemblyAI integration tests"""
     
     def __init__(self):
-        self.project_root = Path(__file__).parent
-        self.test_file = self.project_root / "test_assemblyai_integration.py"
-        self.coverage_dir = self.project_root / "htmlcov"
+        self.project_root = Path(__file__).parent.parent
+        self.test_dir = Path(__file__).parent
+        self.test_file = self.test_dir / "test_assemblyai_integration.py"
+        self.coverage_dir = self.test_dir / "htmlcov"
         
     def run_command(self, cmd: List[str], description: str) -> int:
         """Run a command and return exit code"""
@@ -73,8 +74,8 @@ class TestRunner:
         """Check if test files exist"""
         required_files = [
             self.test_file,
-            self.project_root / "conftest.py",
-            self.project_root / "voice_handler.py"
+            self.test_dir / "conftest.py",
+            self.project_root / "src" / "handlers" / "voice_handler.py"
         ]
         
         missing = []
@@ -126,7 +127,7 @@ class TestRunner:
         ]
         
         if coverage:
-            cmd.extend(['--cov=voice_handler', '--cov-report=term-missing'])
+            cmd.extend(['--cov=src.handlers.voice_handler', '--cov-report=term-missing'])
         
         return self.run_command(cmd, "Unit Tests")
     
@@ -142,7 +143,7 @@ class TestRunner:
         ]
         
         if coverage:
-            cmd.extend(['--cov=voice_handler', '--cov-report=term-missing'])
+            cmd.extend(['--cov=src.handlers.voice_handler', '--cov-report=term-missing'])
         
         return self.run_command(cmd, "Integration Tests (Mocked)")
     
@@ -183,7 +184,7 @@ class TestRunner:
             str(self.test_file),
             '-v',
             '-m', 'not real_api',  # Exclude real API for coverage
-            '--cov=voice_handler',
+            '--cov=src.handlers.voice_handler',
             '--cov-report=html',
             '--cov-report=term-missing',
             '--cov-report=xml',
@@ -222,7 +223,7 @@ class TestRunner:
         env['GITHUB_ACTIONS'] = 'true'
         
         # Run lint checks first
-        lint_cmd = ['python', '-m', 'flake8', 'voice_handler.py', 'test_assemblyai_integration.py', '--max-line-length=127']
+        lint_cmd = ['python', '-m', 'flake8', '../src/handlers/voice_handler.py', 'test_assemblyai_integration.py', '--max-line-length=127']
         lint_result = self.run_command(lint_cmd, "Lint Check")
         
         if lint_result != 0:
@@ -234,7 +235,7 @@ class TestRunner:
             str(self.test_file),
             '-v',
             '-m', 'not real_api',
-            '--cov=voice_handler',
+            '--cov=src.handlers.voice_handler',
             '--cov-report=xml',
             '--cov-report=term-missing',
             '--tb=short',
@@ -266,7 +267,7 @@ class TestRunner:
         ]
         
         if coverage:
-            cmd.extend(['--cov=voice_handler', '--cov-report=term-missing'])
+            cmd.extend(['--cov=src.handlers.voice_handler', '--cov-report=term-missing'])
         
         return self.run_command(cmd, "All Safe Tests")
     
@@ -283,7 +284,7 @@ class TestRunner:
         # Check if voice_handler can be imported
         try:
             sys.path.insert(0, str(self.project_root))
-            import voice_handler
+            from src.handlers import voice_handler
             print("✅ voice_handler module imports successfully")
         except ImportError as e:
             print(f"❌ Failed to import voice_handler: {e}")

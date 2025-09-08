@@ -16,11 +16,11 @@ from pathlib import Path
 
 from telegram import Update, BotCommand, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, CommandHandler
-from telegram_bot import (
+from src.core.telegram_bot import (
     AIInterviewerBot, InterviewSession, PromptVariant, 
     InterviewStage, PromptManager, ClaudeIntegration
 )
-from config import config
+from src.core.config import config
 
 # Configure structured logging
 import structlog

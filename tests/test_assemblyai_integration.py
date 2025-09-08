@@ -41,7 +41,7 @@ import pytest_asyncio
 from unittest import IsolatedAsyncioTestCase
 
 # Import the modules to test
-from voice_handler import (
+from src.handlers.voice_handler import (
     VoiceMessageHandler,
     VoiceTranscriptionResult,
     VoiceProcessingConfig,
@@ -52,7 +52,7 @@ from voice_handler import (
     create_voice_handler,
     create_voice_handler_with_features
 )
-from config import BotConfig
+from src.core.config import BotConfig
 
 # Mock AssemblyAI to avoid import issues in testing environment
 try:

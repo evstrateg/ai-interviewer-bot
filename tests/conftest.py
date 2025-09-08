@@ -37,7 +37,7 @@ def event_loop():
 @pytest.fixture
 def test_config():
     """Create comprehensive test configuration with all features enabled"""
-    from voice_handler import VoiceProcessingConfig
+    from src.handlers.voice_handler import VoiceProcessingConfig
     
     return VoiceProcessingConfig(
         assemblyai_api_key=TEST_API_KEY,
@@ -71,7 +71,7 @@ def test_config():
 @pytest.fixture
 def minimal_config():
     """Create minimal test configuration with basic features only"""
-    from voice_handler import VoiceProcessingConfig
+    from src.handlers.voice_handler import VoiceProcessingConfig
     
     return VoiceProcessingConfig(
         assemblyai_api_key=TEST_API_KEY,
@@ -87,7 +87,7 @@ def minimal_config():
 @pytest.fixture
 def real_config():
     """Create configuration for real API testing (if enabled)"""
-    from voice_handler import VoiceProcessingConfig
+    from src.handlers.voice_handler import VoiceProcessingConfig
     
     real_api_key = os.getenv('ASSEMBLYAI_API_KEY')
     if not real_api_key:
@@ -456,7 +456,7 @@ def mock_audio_processor_temp_dir(temp_audio_dir):
 @pytest.fixture
 def performance_config():
     """Create configuration optimized for performance testing"""
-    from voice_handler import VoiceProcessingConfig
+    from src.handlers.voice_handler import VoiceProcessingConfig
     
     return VoiceProcessingConfig(
         assemblyai_api_key=TEST_API_KEY,
@@ -632,7 +632,7 @@ def assert_transcription_result_valid(result):
 
 def assert_config_valid(config):
     """Assert that a voice processing config is valid"""
-    from voice_handler import VoiceProcessingConfig
+    from src.handlers.voice_handler import VoiceProcessingConfig
     
     assert isinstance(config, VoiceProcessingConfig)
     assert config.assemblyai_api_key

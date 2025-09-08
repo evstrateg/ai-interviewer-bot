@@ -33,10 +33,10 @@ def test_file_structure():
     print("🧪 Testing: File Structure")
     
     required_files = [
-        'telegram_bot.py',
-        'bot_enhanced.py', 
-        'config.py',
-        'requirements.txt',
+        'src/core/telegram_bot.py',
+        'src/core/bot_enhanced.py', 
+        'src/core/config.py',
+        'config/requirements.txt',
         'prompt_v1_master_interviewer.md',
         'prompt_v2_telegram_optimized.md',
         'prompt_v3_conversational_balanced.md',
@@ -166,7 +166,7 @@ def test_python_syntax():
     """Test that Python files have valid syntax"""
     print("🧪 Testing: Python Syntax")
     
-    python_files = ['telegram_bot.py', 'bot_enhanced.py', 'config.py']
+    python_files = ['src/core/telegram_bot.py', 'src/core/bot_enhanced.py', 'src/core/config.py']
     
     for file in python_files:
         try:

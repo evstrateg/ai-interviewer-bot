@@ -9,7 +9,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 # Import localization system
-from localization import (
+from src.localization.localization import (
     localization, t, ts, set_language, detect_language,
     SupportedLanguage, LocalizationManager
 )
@@ -296,7 +296,7 @@ class LocalizedAIInterviewerBot:
 # Integration steps for existing bot:
 """
 1. Import localization system:
-   from localization import localization, t, ts, set_language, detect_language, SupportedLanguage
+   from src.localization.localization import localization, t, ts, set_language, detect_language, SupportedLanguage
 
 2. Add language detection on first user interaction:
    - Check if user has language preference

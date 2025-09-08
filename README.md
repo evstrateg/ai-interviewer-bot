@@ -1094,7 +1094,7 @@ async def get_bot_statistics() -> Dict[str, Any]
 async def export_session_data(user_id: int, format: str = "json") -> str
 ```
 
-📚 **Complete API Documentation**: See [developer-api-reference.md](developer-api-reference.md) for detailed API specifications, [integration-guide.md](integration-guide.md) for implementation patterns, and [json-response-schema.md](json-response-schema.md) for Claude response formats.
+📚 **Complete API Documentation**: See [developer-api-reference.md](docs/api/developer-api-reference.md) for detailed API specifications, [integration-guide.md](docs/guides/integration-guide.md) for implementation patterns, and [json-response-schema.md](docs/api/json-response-schema.md) for Claude response formats.
 
 ## ⚡ Performance & Monitoring
 
@@ -2202,9 +2202,9 @@ env | grep -E "BOT_|CLAUDE_|LOG_|SESSION_" | sed 's/=.*/=[HIDDEN]/'
 ### 📞 Getting Help
 
 1. **Check Documentation**:
-   - [Integration Guide](integration-guide.md) for deployment issues
-   - [Developer API Reference](developer-api-reference.md) for code issues
-   - [Architecture Diagrams](architecture_diagrams.md) for system understanding
+   - [Integration Guide](docs/guides/integration-guide.md) for deployment issues
+   - [Developer API Reference](docs/api/developer-api-reference.md) for code issues
+   - [Architecture Diagrams](docs/technical/architecture_diagrams.md) for system understanding
 
 2. **Community Resources**:
    - GitHub Issues: Report bugs and feature requests
@@ -2548,56 +2548,76 @@ We especially welcome contributions in:
 
 ## 📖 Documentation Suite
 
-This project includes comprehensive documentation to support different user needs:
+This project includes comprehensive documentation organized for easy navigation:
 
-### 📚 Core Documentation
+### 📚 Documentation Hub
+**[📋 Complete Documentation Hub](docs/README.md)** - Centralized access to all project documentation
 
-| Document | Purpose | Audience |
-|----------|---------|----------|
-| **[README.md](README.md)** | Main project overview and quick start | All users |
-| **[Integration Guide](integration-guide.md)** | Deployment and integration patterns | DevOps, Integrators |
-| **[Developer API Reference](developer-api-reference.md)** | Complete API documentation | Developers |
-| **[Architecture Diagrams](architecture_diagrams.md)** | System architecture and component relationships | Architects, Developers |
+### 🗂️ Organized Documentation Structure
 
-### 🔧 Technical References
+#### 📖 [User & Developer Guides](docs/guides/)
+- **[Developer Guide](docs/guides/DEVELOPER_GUIDE.md)** - Complete development setup and guidelines
+- **[End User Guide](docs/guides/END_USER_GUIDE.md)** - User manual for interview participants
+- **[Integration Guide](docs/guides/integration-guide.md)** - Deployment and integration patterns
+- **[Feature Update Guide](docs/guides/FEATURE_UPDATE_GUIDE.md)** - Guide for implementing system updates
+- **[Voice Setup Guide](docs/guides/VOICE_SETUP.md)** - Complete voice functionality setup
+- **[User Testing Guide](docs/guides/USER_TESTING_GUIDE.md)** - Manual testing procedures
 
-| Document | Purpose | Audience |
-|----------|---------|----------|
-| **[JSON Response Schema](json-response-schema.md)** | Claude AI response format specification | API Developers |
-| **[API Documentation](api-documentation.yaml)** | OpenAPI/Swagger specification | Integration Developers |
-| **[User Testing Guide](USER_TESTING_GUIDE.md)** | Manual testing procedures | QA, Testers |
-| **[PythonAnywhere Deployment](PYTHONANYWHERE.md)** | Cloud deployment guide | DevOps |
+#### 🔌 [API Documentation](docs/api/)
+- **[API Documentation Hub](docs/api/README.md)** - Complete API reference portal
+- **[Developer API Reference](docs/api/developer-api-reference.md)** - Complete API documentation
+- **[AssemblyAI Integration](docs/api/ASSEMBLYAI_API_REFERENCE.md)** - Voice processing API reference
+- **[JSON Response Schema](docs/api/json-response-schema.md)** - Claude AI response formats
+- **[OpenAPI Specification](docs/api/api-documentation.yaml)** - Swagger/OpenAPI specs
 
-### 🎯 Quick Navigation
+#### ⚙️ [Technical Documentation](docs/technical/)
+- **[Architecture Diagrams](docs/technical/architecture_diagrams.md)** - System architecture and components
+- **[Test Documentation](docs/technical/TEST_DOCUMENTATION.md)** - Testing strategies and procedures
+- **[PythonAnywhere Deployment](docs/technical/PYTHONANYWHERE.md)** - Cloud deployment guide
+- **[Telegram Bot Implementation](docs/technical/telegram_bot_implementation.md)** - Technical implementation details
 
-**🚀 Getting Started**
-- New to the project? Start with [Quick Start](#-quick-start)
-- Want to deploy? See [Deployment Options](#-detailed-setup-options)
-- Need help? Check [Troubleshooting](#-troubleshooting)
+#### 📋 [Project Documentation](docs/project/)
+- **[Client Brief](docs/project/CLIENT_BRIEF.md)** - Project requirements and specifications
+- **[Development Summary](docs/project/DEV_SUMMARY.md)** - Current development status
+- **[Project Notes](docs/project/PROJECT_NOTES.md)** - Ongoing project decisions and notes
 
-**👩‍💻 For Developers**
-- API integration: [API Usage & Integration](#-api-usage--integration)
-- Code reference: [Developer API Reference](developer-api-reference.md)
-- System design: [Architecture Overview](#-architecture-overview)
+#### 🌍 [Localization](docs/localization/)
+- **[Localization Guide](docs/localization/LOCALIZATION_README.md)** - Multi-language support implementation
 
-**🏗️ For DevOps**
-- Production setup: [Integration Guide](integration-guide.md)
-- Performance tuning: [Performance & Monitoring](#-performance--monitoring)
-- Security hardening: [Security Considerations](#-security-considerations)
+#### 🤖 [AI Prompts](prompts/)
+- **[Prompt Documentation](prompts/README.md)** - AI conversation templates and configurations
 
-**🤝 For Contributors**
-- How to contribute: [Contributing](#-contributing)
-- Development setup: [Development Guide](#-development-guide)
-- Testing guidelines: Above in Contributing section
+### 🎯 Quick Navigation by Role
 
-### 📋 Documentation Standards
+**🚀 New to the Project?**
+- Start with this [README.md](README.md) for overview and quick setup
+- Visit the [📋 Documentation Hub](docs/README.md) for organized navigation
+- Follow the [Developer Guide](docs/guides/DEVELOPER_GUIDE.md) for development setup
+
+**🔧 Developers & Integrators**
+- [API Documentation](docs/api/README.md) for complete API reference
+- [Integration Guide](docs/guides/integration-guide.md) for deployment patterns
+- [Architecture Diagrams](docs/technical/architecture_diagrams.md) for system understanding
+
+**👥 End Users & Testers**
+- [End User Guide](docs/guides/END_USER_GUIDE.md) for interview participants
+- [User Testing Guide](docs/guides/USER_TESTING_GUIDE.md) for testing procedures
+- [Voice Setup Guide](docs/guides/VOICE_SETUP.md) for voice functionality
+
+**📋 Project Managers & Stakeholders**
+- [Project Documentation](docs/project/README.md) for requirements and status
+- [Development Summary](docs/project/DEV_SUMMARY.md) for current progress
+- [Client Brief](docs/project/CLIENT_BRIEF.md) for original requirements
+
+### 📊 Documentation Standards
 
 All documentation follows these principles:
-
-- **📱 Mobile-First**: Readable on all devices
-- **🔍 Searchable**: Clear headings and structure
-- **💡 Example-Rich**: Practical code examples
-- **🔄 Up-to-Date**: Synchronized with code changes
+- **🏗️ Organized Structure**: Logical categorization in dedicated directories
+- **🔗 Cross-Referenced**: Linked navigation between related documents
+- **📱 Mobile-First**: Readable on all devices with responsive design
+- **🔍 Searchable**: Clear headings and structure for easy discovery
+- **⚡ Up-to-Date**: Documentation updated with code changes
+- **🎯 Role-Based**: Targeted content for different user types
 - **🌍 Accessible**: Clear language, multiple skill levels
 
 ## 📄 License

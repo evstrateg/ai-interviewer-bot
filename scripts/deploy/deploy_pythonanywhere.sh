@@ -60,9 +60,12 @@ source venv/bin/activate
 echo -e "${BLUE}[UPGRADE]${NC} Upgrading pip..."
 python -m pip install --upgrade pip
 
-# Install requirements
+# Install requirements and package
 echo -e "${BLUE}[INSTALL]${NC} Installing Python dependencies..."
-pip install -r requirements.txt
+pip install -r config/requirements.txt
+
+echo -e "${BLUE}[INSTALL]${NC} Installing project as package..."
+pip install -e .
 
 # Create necessary directories
 echo -e "${BLUE}[MKDIR]${NC} Creating required directories..."
@@ -90,17 +93,17 @@ echo -e "${BLUE}[INFO]${NC} Checking PythonAnywhere account type..."
 if [ -d "/var/services" ]; then
     echo -e "${GREEN}[PAID]${NC} Paid account detected - Always-On Tasks available"
     echo -e "${BLUE}[INFO]${NC} You can run the bot as an Always-On Task"
-    echo "   Command: /home/$USERNAME/ai-interviewer-bot/venv/bin/python /home/$USERNAME/ai-interviewer-bot/bot_enhanced.py"
+    echo "   Command: /home/$USERNAME/ai-interviewer-bot/venv/bin/interview-bot-enhanced"
     echo "   Working directory: /home/$USERNAME/ai-interviewer-bot"
 else
     echo -e "${YELLOW}[FREE]${NC} Free account detected - use bash console to run bot"
     echo -e "${BLUE}[INFO]${NC} To run the bot manually:"
-    echo "   cd $DEPLOY_DIR && source venv/bin/activate && python bot_enhanced.py"
+    echo "   cd $DEPLOY_DIR && source venv/bin/activate && interview-bot-enhanced"
 fi
 
 # Test configuration
 echo -e "${BLUE}[TEST]${NC} Testing configuration..."
-if python -c "from config import config; print('✅ Config loaded successfully')"; then
+if python -c "from src.core.config import config; print('✅ Config loaded successfully')"; then
     echo -e "${GREEN}[OK]${NC} Configuration test passed"
 else
     echo -e "${YELLOW}[WARNING]${NC} Configuration test failed - please check .env file"
@@ -113,7 +116,8 @@ cat > run_bot.sh << 'EOF'
 cd "$(dirname "$0")"
 source venv/bin/activate
 echo "🤖 Starting AI Interviewer Bot..."
-python bot_enhanced.py
+# Use the installed package entry point
+interview-bot-enhanced
 EOF
 chmod +x run_bot.sh
 
@@ -125,7 +129,7 @@ echo "2. Test the bot: ./run_bot.sh"
 echo "3. For production:"
 if [ -d "/var/services" ]; then
     echo "   • Set up Always-On Task in PythonAnywhere dashboard"
-    echo "   • Command: $DEPLOY_DIR/venv/bin/python $DEPLOY_DIR/bot_enhanced.py"
+    echo "   • Command: $DEPLOY_DIR/venv/bin/interview-bot-enhanced"
     echo "   • Working directory: $DEPLOY_DIR"
 else
     echo "   • Keep bash console open and run: ./run_bot.sh"

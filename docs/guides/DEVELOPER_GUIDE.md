@@ -1296,4 +1296,4 @@ def test_session_loading_performance():
 
 ---
 
-*This developer guide provides comprehensive information for extending and maintaining the AI Interviewer Bot. For user-focused documentation, see the [User Guide](END_USER_GUIDE.md) and [API Documentation](developer-api-reference.md).*
+*This developer guide provides comprehensive information for extending and maintaining the AI Interviewer Bot. For user-focused documentation, see the [User Guide](END_USER_GUIDE.md) and [API Documentation](../api/developer-api-reference.md).*

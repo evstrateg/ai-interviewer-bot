@@ -11,12 +11,12 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-# Add current directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent))
+# Add project root to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 try:
-    from config import config
-    from telegram_bot import PromptManager, ClaudeIntegration, InterviewSession, PromptVariant, InterviewStage
+    from src.core.config import config
+    from src.core.telegram_bot import PromptManager, ClaudeIntegration, InterviewSession, PromptVariant, InterviewStage
     import anthropic
 except ImportError as e:
     print(f"❌ Import error: {e}")
