@@ -60,12 +60,9 @@ source venv/bin/activate
 echo -e "${BLUE}[UPGRADE]${NC} Upgrading pip..."
 python -m pip install --upgrade pip
 
-# Install requirements and package
+# Install minimal requirements for production
 echo -e "${BLUE}[INSTALL]${NC} Installing Python dependencies..."
-pip install -r config/requirements.txt
-
-echo -e "${BLUE}[INSTALL]${NC} Installing project as package..."
-pip install -e .
+pip install -r config/requirements_minimal.txt
 
 # Create necessary directories
 echo -e "${BLUE}[MKDIR]${NC} Creating required directories..."
@@ -93,12 +90,12 @@ echo -e "${BLUE}[INFO]${NC} Checking PythonAnywhere account type..."
 if [ -d "/var/services" ]; then
     echo -e "${GREEN}[PAID]${NC} Paid account detected - Always-On Tasks available"
     echo -e "${BLUE}[INFO]${NC} You can run the bot as an Always-On Task"
-    echo "   Command: /home/$USERNAME/ai-interviewer-bot/venv/bin/interview-bot-enhanced"
+    echo "   Command: /home/$USERNAME/ai-interviewer-bot/venv/bin/python -m src.core.bot_enhanced"
     echo "   Working directory: /home/$USERNAME/ai-interviewer-bot"
 else
     echo -e "${YELLOW}[FREE]${NC} Free account detected - use bash console to run bot"
     echo -e "${BLUE}[INFO]${NC} To run the bot manually:"
-    echo "   cd $DEPLOY_DIR && source venv/bin/activate && interview-bot-enhanced"
+    echo "   cd $DEPLOY_DIR && source venv/bin/activate && python -m src.core.bot_enhanced"
 fi
 
 # Test configuration
@@ -116,8 +113,8 @@ cat > run_bot.sh << 'EOF'
 cd "$(dirname "$0")"
 source venv/bin/activate
 echo "🤖 Starting AI Interviewer Bot..."
-# Use the installed package entry point
-interview-bot-enhanced
+# Run bot directly via Python module
+python -m src.core.bot_enhanced
 EOF
 chmod +x run_bot.sh
 
@@ -129,7 +126,7 @@ echo "2. Test the bot: ./run_bot.sh"
 echo "3. For production:"
 if [ -d "/var/services" ]; then
     echo "   • Set up Always-On Task in PythonAnywhere dashboard"
-    echo "   • Command: $DEPLOY_DIR/venv/bin/interview-bot-enhanced"
+    echo "   • Command: $DEPLOY_DIR/venv/bin/python -m src.core.bot_enhanced"
     echo "   • Working directory: $DEPLOY_DIR"
 else
     echo "   • Keep bash console open and run: ./run_bot.sh"
