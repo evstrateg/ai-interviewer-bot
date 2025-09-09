@@ -16,6 +16,7 @@ import json
 import logging
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 from enum import Enum
@@ -23,6 +24,9 @@ from enum import Enum
 import anthropic
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, BotCommand
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
+
+# Import localization
+from src.localization.localization import localization, t, SupportedLanguage
 
 # Voice processing imports (optional)
 try:
@@ -112,11 +116,12 @@ class PromptManager:
         
         for variant, filename in prompt_files.items():
             try:
-                with open(filename, 'r', encoding='utf-8') as f:
+                prompt_path = Path("prompts") / filename
+                with open(prompt_path, 'r', encoding='utf-8') as f:
                     prompts[variant] = f.read()
                 logger.info(f"Loaded prompt variant: {variant.value}")
             except FileNotFoundError:
-                logger.error(f"Prompt file not found: {filename}")
+                logger.error(f"Prompt file not found: {prompt_path}")
                 # Fallback basic prompt
                 prompts[variant] = self._get_basic_prompt()
         
@@ -134,16 +139,9 @@ Ask one question at a time and dig deeper into responses.
         """Get prompt for specified variant"""
         return self.prompts.get(variant, self._get_basic_prompt())
     
-    def get_variant_description(self, variant: PromptVariant) -> str:
+    def get_variant_description(self, variant: PromptVariant, user_id: Optional[int] = None) -> str:
         """Get human-readable description of prompt variant"""
-        descriptions = {
-            PromptVariant.MASTER: "🎯 Master Interviewer - Comprehensive and systematic approach",
-            PromptVariant.TELEGRAM_OPTIMIZED: "📱 Telegram Optimized - Mobile-friendly with concise messages", 
-            PromptVariant.CONVERSATIONAL: "💬 Conversational Balance - Natural flow with systematic coverage",
-            PromptVariant.STAGE_SPECIFIC: "🎪 Stage Specific - Detailed approach for each interview stage",
-            PromptVariant.CONVERSATION_MGMT: "🧠 Conversation Management - Advanced recovery and adaptation"
-        }
-        return descriptions.get(variant, "Unknown variant")
+        return localization.format_prompt_description(variant.value, user_id)
 
 class ClaudeIntegration:
     """Claude Sonnet-4 integration for interview responses"""
@@ -187,6 +185,10 @@ class ClaudeIntegration:
         # Get recent conversation history (last 5 exchanges)
         recent_history = session.conversation_history[-10:]
         
+        # Get user language preference
+        user_language = localization.get_user_language(session.user_id)
+        language_instruction = "Respond in Russian" if user_language.value == "ru" else "Respond in English"
+        
         context = f"""
 Current Interview State:
 - Stage: {session.current_stage.value}
@@ -194,6 +196,7 @@ Current Interview State:
 - Engagement Level: {session.engagement_level}
 - Examples Collected: {session.examples_collected}
 - Stage Completeness: {session.stage_completeness[session.current_stage.value]}%
+- User Language: {language_instruction}
 
 Recent Conversation History:
 """
@@ -309,37 +312,71 @@ class AIInterviewerBot:
             logger.info("Voice message handlers added")
     
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle /start command"""
+        """Handle /start command - always show language selection first"""
         user_id = update.effective_user.id
         username = update.effective_user.username or update.effective_user.first_name
         
-        welcome_message = f"""🤖 <b>AI Professional Knowledge Interviewer</b>
+        # Always show language selection first for each /start
+        await self._show_language_selection(update, username)
+    
+    async def _show_language_selection(self, update: Update, username: str):
+        """Show language selection for new users"""
+        welcome_message = f"""🤖 **AI Professional Knowledge Interviewer**
 
-Hello {username}! I'm an AI interviewer specialized in extracting deep professional insights through structured conversations.
+Hello {username}! / Привет, {username}!
 
-<b>What I do:</b>
-• Conduct 9-stage professional knowledge interviews
-• Extract implicit expertise and best practices  
-• Ask one focused question at a time
-• Adapt to your communication style
-• Generate comprehensive insights
+Please select your preferred language:
+Пожалуйста, выберите предпочитаемый язык:"""
 
-<b>Interview Duration:</b> 90-120 minutes
-<b>Method:</b> Systematic questioning with adaptive deepening
+        keyboard = [
+            [
+                InlineKeyboardButton("🇺🇸 English", callback_data="select_lang_en"),
+                InlineKeyboardButton("🇷🇺 Русский", callback_data="select_lang_ru")
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(welcome_message, reply_markup=reply_markup, parse_mode='Markdown')
+    
+    async def _show_interview_selection(self, update: Update, user_id: int, username: str):
+        """Show interview style selection for users with language set"""
+        welcome_message = f"""{t("welcome_title_short", user_id)}
 
-Choose your preferred interview style:"""
+{t("welcome_greeting_short", user_id, username=username)}
+
+{t("welcome_choose_style", user_id)}"""
         
         keyboard = [
-            [InlineKeyboardButton("🎯 Master Interviewer", callback_data=f"prompt_{PromptVariant.MASTER.value}")],
-            [InlineKeyboardButton("📱 Telegram Optimized", callback_data=f"prompt_{PromptVariant.TELEGRAM_OPTIMIZED.value}")],
-            [InlineKeyboardButton("💬 Conversational Balance", callback_data=f"prompt_{PromptVariant.CONVERSATIONAL.value}")],
-            [InlineKeyboardButton("🎪 Stage Specific", callback_data=f"prompt_{PromptVariant.STAGE_SPECIFIC.value}")],
-            [InlineKeyboardButton("🧠 Conversation Management", callback_data=f"prompt_{PromptVariant.CONVERSATION_MGMT.value}")],
-            [InlineKeyboardButton("ℹ️ Learn More", callback_data="learn_more")]
+            [InlineKeyboardButton(t("btn_master", user_id), callback_data=f"prompt_{PromptVariant.MASTER.value}")],
+            [InlineKeyboardButton(t("btn_telegram", user_id), callback_data=f"prompt_{PromptVariant.TELEGRAM_OPTIMIZED.value}")],
+            [InlineKeyboardButton(t("btn_conversational", user_id), callback_data=f"prompt_{PromptVariant.CONVERSATIONAL.value}")],
+            [InlineKeyboardButton(t("btn_stage_specific", user_id), callback_data=f"prompt_{PromptVariant.STAGE_SPECIFIC.value}")],
+            [InlineKeyboardButton(t("btn_conversation_mgmt", user_id), callback_data=f"prompt_{PromptVariant.CONVERSATION_MGMT.value}")],
+            [InlineKeyboardButton(t("prompt_learn_more", user_id), callback_data="learn_more")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         await update.message.reply_text(welcome_message, reply_markup=reply_markup, parse_mode='HTML')
+    
+    async def _show_interview_selection_as_new_message(self, query, user_id: int, username: str):
+        """Show interview style selection as new message (after language selection)"""
+        welcome_message = f"""{t("welcome_title_short", user_id)}
+
+{t("welcome_greeting_short", user_id, username=username)}
+
+{t("welcome_choose_style", user_id)}"""
+        
+        keyboard = [
+            [InlineKeyboardButton(t("btn_master", user_id), callback_data=f"prompt_{PromptVariant.MASTER.value}")],
+            [InlineKeyboardButton(t("btn_telegram", user_id), callback_data=f"prompt_{PromptVariant.TELEGRAM_OPTIMIZED.value}")],
+            [InlineKeyboardButton(t("btn_conversational", user_id), callback_data=f"prompt_{PromptVariant.CONVERSATIONAL.value}")],
+            [InlineKeyboardButton(t("btn_stage_specific", user_id), callback_data=f"prompt_{PromptVariant.STAGE_SPECIFIC.value}")],
+            [InlineKeyboardButton(t("btn_conversation_mgmt", user_id), callback_data=f"prompt_{PromptVariant.CONVERSATION_MGMT.value}")],
+            [InlineKeyboardButton(t("prompt_learn_more", user_id), callback_data="learn_more")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.message.reply_text(welcome_message, reply_markup=reply_markup, parse_mode='HTML')
     
     async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle button callbacks"""
@@ -349,7 +386,24 @@ Choose your preferred interview style:"""
         user_id = query.from_user.id
         username = query.from_user.username or query.from_user.first_name
         
-        if query.data.startswith("prompt_"):
+        # Handle language selection
+        if query.data == "select_lang_en":
+            localization.set_user_language(user_id, SupportedLanguage.ENGLISH)
+            await query.edit_message_text("✅ Language set to English!")
+            # Show interview selection after language is set
+            await asyncio.sleep(1)
+            await self._show_interview_selection_as_new_message(query, user_id, username)
+            return
+            
+        elif query.data == "select_lang_ru":
+            localization.set_user_language(user_id, SupportedLanguage.RUSSIAN)
+            await query.edit_message_text("✅ Язык установлен на русский!")
+            # Show interview selection after language is set
+            await asyncio.sleep(1)
+            await self._show_interview_selection_as_new_message(query, user_id, username)
+            return
+        
+        elif query.data.startswith("prompt_"):
             # Prompt selection
             variant_value = query.data.replace("prompt_", "")
             try:
@@ -455,18 +509,22 @@ Select your preferred style to begin!
         
         session = self.sessions[user_id]
         
-        # Generate first question
+        # Generate first question with language-appropriate message
+        user_language = localization.get_user_language(user_id)
+        ready_message = "Я готов начать интервью" if user_language.value == "ru" else "I'm ready to begin the interview"
+        
         initial_response = await self.claude.generate_interview_response(
             session, 
-            "I'm ready to begin the interview",
+            ready_message,
             self.prompt_manager
         )
         
         # Update session state
         session.add_message("assistant", initial_response['response'], initial_response.get('metadata'))
         
+        interview_started_msg = t("interview_started", user_id)
         await query.edit_message_text(
-            f"**🎤 Interview Started**\n\n{initial_response['response']}", 
+            f"{interview_started_msg}\n\n{initial_response['response']}", 
             parse_mode='Markdown'
         )
     

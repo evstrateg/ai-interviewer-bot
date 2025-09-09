@@ -21,6 +21,7 @@ from src.core.telegram_bot import (
     InterviewStage, PromptManager, ClaudeIntegration
 )
 from src.core.config import config
+from src.localization.localization import localization, t, SupportedLanguage
 
 # Configure structured logging
 import structlog
@@ -275,25 +276,17 @@ class EnhancedAIInterviewerBot(AIInterviewerBot):
             self.metrics.increment('sessions_started')
             
             confirmation_message = f"""
-✅ **Interview Setup Complete**
+{t("setup_complete", user_id)}
 
-**Selected Style:** {self.prompt_manager.get_variant_description(variant)}
+{t("selected_style", user_id, variant_description=self.prompt_manager.get_variant_description(variant, user_id))}
 
-**Interview Process:**
-1. **Greeting** - Building rapport (3-5 min)
-2. **Profiling** - Your background (10 min) 
-3. **Essence** - Role philosophy (15 min)
-4. **Operations** - Work processes (20 min)
-5. **Expertise Map** - Knowledge levels (20 min)
-6. **Failure Modes** - Common mistakes (20 min)
-7. **Mastery** - Expert insights (15 min) 
-8. **Growth Path** - Development timeline (15 min)
-9. **Wrap Up** - Final validation (5 min)
+{t("interview_process_title", user_id)}
+{t("interview_stages", user_id)}
 
-**Ready to begin?** Click below to start your interview!
+{t("ready_to_begin", user_id)}
 """
             
-            keyboard = [[InlineKeyboardButton("🚀 Begin Interview", callback_data="start_interview")]]
+            keyboard = [[InlineKeyboardButton(t("begin_interview", user_id), callback_data="start_interview")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
             await query.edit_message_text(confirmation_message, reply_markup=reply_markup, parse_mode='Markdown')
@@ -306,7 +299,7 @@ class EnhancedAIInterviewerBot(AIInterviewerBot):
                         traceback=traceback.format_exc())
             
             await query.edit_message_text(
-                "❌ Sorry, there was an error setting up your interview. Please try again with /start."
+                t("setup_error", user_id)
             )
             self.metrics.increment('errors_occurred')
     
@@ -320,7 +313,7 @@ class EnhancedAIInterviewerBot(AIInterviewerBot):
             session = self.session_manager.get_session(user_id)
             if not session:
                 await update.message.reply_text(
-                    "No active interview session. Please use /start to begin an interview."
+                    t("no_active_session", user_id)
                 )
                 return
             
@@ -358,7 +351,7 @@ class EnhancedAIInterviewerBot(AIInterviewerBot):
                         # Final fallback response
                         response_data = {
                             'interview_stage': session.current_stage.value,
-                            'response': "I'm experiencing some technical difficulties. Could you please rephrase your last response?",
+                            'response': t("technical_difficulties", user_id),
                             'metadata': {
                                 'question_depth': session.question_depth,
                                 'completeness': session.stage_completeness.get(session.current_stage.value, 0),
@@ -392,7 +385,7 @@ class EnhancedAIInterviewerBot(AIInterviewerBot):
             self.metrics.increment('errors_occurred')
             
             await update.message.reply_text(
-                "❌ I encountered an error processing your message. Please try again or use /reset to restart the interview."
+                t("message_processing_error", user_id)
             )
     
     async def _update_session_from_response(self, session: InterviewSession, response_data: Dict):
@@ -431,9 +424,9 @@ class EnhancedAIInterviewerBot(AIInterviewerBot):
         # Add error notice if applicable
         if 'error' in response_data:
             error_notices = {
-                'JSON_PARSE_FAILED': "*Note: Response formatting issue - continuing interview*",
-                'API_ERROR': "*Note: Temporary API issue - please continue*",
-                'API_RETRY_FAILED': "*Note: Service temporarily unstable - responses may be delayed*"
+                'JSON_PARSE_FAILED': t("error_json_parse", update.effective_user.id),
+                'API_ERROR': t("error_api_general", update.effective_user.id),
+                'API_RETRY_FAILED': t("error_api_retry_failed", update.effective_user.id)
             }
             
             error_notice = error_notices.get(response_data['error'])
@@ -455,27 +448,29 @@ class EnhancedAIInterviewerBot(AIInterviewerBot):
             end_time = datetime.now()
             duration = end_time - session.start_time
             
+            user_id = session.user_id
             summary = f"""
-🎉 **Interview Complete!**
+{t("interview_complete", user_id)}
 
-**Session Summary:**
-• Duration: {duration.total_seconds() // 60:.0f} minutes
-• Messages exchanged: {len(session.conversation_history)}
-• Examples collected: {session.examples_collected}
-• Key insights: {len(session.key_insights)}
+{t("session_summary", user_id)}
+{t("duration", user_id, duration=int(duration.total_seconds() // 60))}
+{t("messages_exchanged", user_id, count=len(session.conversation_history))}
+{t("examples_collected", user_id, count=session.examples_collected)}
+{t("key_insights", user_id, count=len(session.key_insights))}
 
-**Stages Completed:**
+{t("stages_completed", user_id)}
 """
             
             for stage in InterviewStage:
                 completeness = session.stage_completeness.get(stage.value, 0)
                 status = "✅" if completeness >= 80 else "⚠️" if completeness >= 50 else "❌"
-                summary += f"{status} {stage.value.title()}: {completeness}%\n"
+                stage_name = localization.format_stage_name(stage.value, user_id)
+                summary += f"{status} {stage_name}: {completeness}%\n"
             
-            summary += """
-**Thank you for participating!** Your professional insights have been valuable.
+            summary += f"""
+{t("thank_you", user_id)}
 
-Use /reset to start a new interview or /metrics to see bot statistics.
+{t("completion_options", user_id)}
 """
             
             # Send message differently based on source
@@ -645,15 +640,75 @@ Use /reset to start a new interview or /metrics to see bot statistics.
                 reply_markup=reply_markup
             )
     
+    async def language_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Language selection command"""
+        user_id = update.effective_user.id
+        
+        keyboard = [
+            [
+                InlineKeyboardButton(t("language_english"), callback_data="lang_en"),
+                InlineKeyboardButton(t("language_russian"), callback_data="lang_ru")
+            ]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await update.message.reply_text(
+            f"{t('language_selection', user_id)}\n\n{t('select_language', user_id)}",
+            reply_markup=reply_markup,
+            parse_mode='Markdown'
+        )
+    
+    async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Enhanced button callback handler"""
+        query = update.callback_query
+        user_id = update.effective_user.id
+        
+        # Handle language selection
+        if query.data == "lang_en":
+            await query.answer()
+            localization.set_user_language(user_id, SupportedLanguage.ENGLISH)
+            await query.edit_message_text(
+                t("language_set", user_id, language="English")
+            )
+            return
+        
+        elif query.data == "lang_ru":
+            await query.answer()
+            localization.set_user_language(user_id, SupportedLanguage.RUSSIAN)
+            await query.edit_message_text(
+                t("language_set", user_id, language="Русский")
+            )
+            return
+        
+        # Handle completion confirmation
+        elif query.data == "confirm_complete":
+            await query.answer()
+            
+            if user_id in self.sessions:
+                session = self.sessions[user_id]
+                await self._complete_interview(session, update, from_callback=True)
+                await query.edit_message_text(t("interview_completed_archived", user_id))
+            else:
+                await query.edit_message_text(t("no_active_session_found", user_id))
+        
+        elif query.data == "cancel_complete":
+            await query.answer()
+            await query.edit_message_text(t("completion_cancelled", user_id))
+        
+        else:
+            # Handle other callbacks from parent class
+            await super().button_callback(update, context)
+    
     async def setup_bot_commands(self):
         """Setup bot commands menu with enhanced version commands"""
         commands = [
-            BotCommand("start", "🚀 Begin new interview"),
-            BotCommand("status", "📊 Check interview progress"),
-            BotCommand("complete", "✅ Complete current interview"),
-            BotCommand("reset", "🔄 Reset current session"),
-            BotCommand("help", "❓ Get help and instructions"),
-            BotCommand("metrics", "📈 View bot statistics"),
+            BotCommand("start", t("cmd_start_desc")),
+            BotCommand("status", t("cmd_status_desc")),
+            BotCommand("complete", t("cmd_complete_desc")),
+            BotCommand("reset", t("cmd_reset_desc")),
+            BotCommand("help", t("cmd_help_desc")),
+            BotCommand("metrics", t("cmd_metrics_desc")),
+            BotCommand("language", "🌐 Language / Язык"),
         ]
         await self.application.bot.set_my_commands(commands)
         logger.info("Enhanced bot commands menu configured")
@@ -668,6 +723,7 @@ def main():
         # Add enhanced commands
         bot.application.add_handler(CommandHandler("metrics", bot.metrics_command))
         bot.application.add_handler(CommandHandler("complete", bot.complete_command))
+        bot.application.add_handler(CommandHandler("language", bot.language_command))
         
         logger.info("Starting Enhanced AI Interviewer Bot...",
                    log_level=config.log_level,

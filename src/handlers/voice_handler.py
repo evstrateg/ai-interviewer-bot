@@ -222,15 +222,14 @@ class AudioProcessor:
         self.temp_dir = Path(tempfile.gettempdir()) / "ai_interviewer_audio"
         self.temp_dir.mkdir(exist_ok=True)
     
-    async def download_voice_message(self, file: File, user_id: int) -> Path:
+    async def download_voice_message(self, file: File, user_id: int, mime_type: str = "audio/ogg") -> Path:
         """Download voice message from Telegram"""
         try:
             # Generate unique filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             file_hash = hashlib.md5(f"{user_id}_{timestamp}_{file.file_id}".encode()).hexdigest()[:8]
             
-            # Detect file extension
-            mime_type = file.mime_type or "audio/ogg"
+            # Detect file extension from provided mime_type
             extension = self._mime_to_extension(mime_type)
             
             output_path = self.temp_dir / f"voice_{user_id}_{file_hash}.{extension}"
@@ -518,7 +517,7 @@ class AssemblyAIClient:
             summarization=self.config.enable_summarization,
             auto_chapters=self.config.enable_auto_chapters,
             content_safety=self.config.enable_content_safety,
-            topic_detection=self.config.enable_topic_detection,
+            # topic_detection=self.config.enable_topic_detection,  # Deprecated in newer AssemblyAI versions
             iab_categories=self.config.enable_iab_categories,
             entity_detection=self.config.enable_entity_detection,
             sentiment_analysis=self.config.enable_sentiment_analysis,
@@ -887,7 +886,7 @@ class VoiceMessageHandler:
             file = await context.bot.get_file(voice.file_id)
             
             # Download voice message
-            downloaded_path = await self.audio_processor.download_voice_message(file, user_id)
+            downloaded_path = await self.audio_processor.download_voice_message(file, user_id, voice.mime_type)
             temp_files.append(downloaded_path)
             
             # Convert and optimize audio
