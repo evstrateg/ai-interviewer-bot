@@ -61,8 +61,25 @@ echo -e "${BLUE}[UPGRADE]${NC} Upgrading pip..."
 python -m pip install --upgrade pip
 
 # Install minimal requirements for production
-echo -e "${BLUE}[INSTALL]${NC} Installing Python dependencies..."
+echo -e "${BLUE}[INSTALL]${NC} Installing core Python dependencies..."
 pip install -r config/requirements_minimal.txt
+
+# Ask about voice processing
+echo ""
+echo -e "${YELLOW}[OPTIONAL]${NC} Enable voice message processing? (y/N)"
+echo "This will install additional dependencies (AssemblyAI, pydub, etc.)"
+read -n 1 -r VOICE_REPLY
+echo ""
+
+if [[ $VOICE_REPLY =~ ^[Yy]$ ]]; then
+    echo -e "${BLUE}[INSTALL]${NC} Installing voice processing dependencies..."
+    pip install -r config/requirements_voice.txt
+    VOICE_ENABLED=true
+    echo -e "${GREEN}[OK]${NC} Voice processing dependencies installed"
+else
+    VOICE_ENABLED=false
+    echo -e "${YELLOW}[SKIP]${NC} Voice processing skipped"
+fi
 
 # Create necessary directories
 echo -e "${BLUE}[MKDIR]${NC} Creating required directories..."
@@ -73,6 +90,14 @@ if [ ! -f .env ]; then
     echo -e "${YELLOW}[ENV]${NC} Creating .env file from template..."
     cp .env.example .env
     
+    # Configure voice processing setting
+    if [ "$VOICE_ENABLED" = true ]; then
+        echo "VOICE_PROCESSING_ENABLED=true" >> .env
+        echo "ASSEMBLYAI_API_KEY=your_assemblyai_key_here" >> .env
+    else
+        echo "VOICE_PROCESSING_ENABLED=false" >> .env
+    fi
+    
     echo -e "${YELLOW}[IMPORTANT]${NC} =================================="
     echo "🔑 Please edit the .env file with your API keys:"
     echo "   nano .env"
@@ -80,6 +105,20 @@ if [ ! -f .env ]; then
     echo "Required variables:"
     echo "   TELEGRAM_BOT_TOKEN=your_telegram_bot_token"
     echo "   ANTHROPIC_API_KEY=your_anthropic_api_key"
+    
+    # Add voice processing note if enabled
+    if [ "$VOICE_ENABLED" = true ]; then
+        echo "   ASSEMBLYAI_API_KEY=your_assemblyai_api_key"
+        echo ""
+        echo "Voice processing is ENABLED. Make sure to:"
+        echo "1. Set ASSEMBLYAI_API_KEY in .env"
+        echo "2. Install FFmpeg: sudo apt install ffmpeg"
+    else
+        echo ""
+        echo "Voice processing is DISABLED (saves resources)"
+        echo "To enable later: set VOICE_PROCESSING_ENABLED=true in .env"
+        echo "and install voice dependencies: pip install -r config/requirements_voice.txt"
+    fi
     echo -e "${YELLOW}=================================="${NC}
 else
     echo -e "${GREEN}[OK]${NC} .env file already exists"
