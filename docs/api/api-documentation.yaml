@@ -1,0 +1,854 @@
+openapi: 3.0.3
+info:
+  title: AI Interviewer Telegram Bot API
+  version: 1.0.0
+  description: |
+    Comprehensive API documentation for the AI Interviewer Telegram Bot system.
+    This bot conducts structured professional knowledge extraction interviews using Claude AI.
+    
+    ## Features
+    - 5 different interviewer prompt variants
+    - 9-stage interview process
+    - Session persistence and management
+    - Structured JSON response handling
+    - Claude Sonnet-4 integration
+    - Real-time progress tracking
+    
+    ## Architecture
+    The bot consists of several key components:
+    - **Telegram Bot Interface**: Handles user interactions
+    - **Session Management**: Tracks interview state and progress
+    - **Claude Integration**: AI-powered interview responses
+    - **Prompt Management**: Multiple interviewer personalities
+    - **Metrics Collection**: Performance and usage tracking
+    
+  contact:
+    name: AI Interviewer Bot
+  license:
+    name: MIT
+    
+servers:
+  - url: https://api.telegram.org/bot{token}
+    description: Telegram Bot API Server
+    variables:
+      token:
+        description: Telegram Bot Token
+        default: YOUR_BOT_TOKEN
+        
+paths:
+  # Telegram Bot Webhook Endpoints
+  /webhook:
+    post:
+      summary: Telegram Webhook Handler
+      description: Receives updates from Telegram Bot API
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramUpdate'
+      responses:
+        '200':
+          description: Update processed successfully
+        '400':
+          description: Invalid request format
+        '500':
+          description: Internal server error
+          
+  # Bot Commands (Internal API)
+  /commands/start:
+    post:
+      summary: Start Interview Command
+      description: Initialize new interview session with prompt variant selection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: integer
+                  description: Telegram user ID
+                username:
+                  type: string
+                  description: Telegram username
+              required:
+                - user_id
+      responses:
+        '200':
+          description: Interview initialization started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResponse'
+        '400':
+          description: Invalid user data
+          
+  /commands/status:
+    get:
+      summary: Get Interview Status
+      description: Retrieve current interview progress and statistics
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Telegram user ID
+      responses:
+        '200':
+          description: Current interview status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewStatus'
+        '404':
+          description: No active session found
+          
+  /commands/reset:
+    delete:
+      summary: Reset Interview Session
+      description: Clear current interview session and start fresh
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: integer
+          description: Telegram user ID
+      responses:
+        '200':
+          description: Session reset successfully
+        '404':
+          description: No active session found
+          
+  /commands/complete:
+    post:
+      summary: Complete Interview Manually
+      description: Force completion of current interview session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: integer
+                confirmation:
+                  type: boolean
+              required:
+                - user_id
+                - confirmation
+      responses:
+        '200':
+          description: Interview completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewCompletion'
+        '404':
+          description: No active session found
+          
+  /commands/metrics:
+    get:
+      summary: Get Bot Metrics
+      description: Retrieve bot performance and usage statistics
+      responses:
+        '200':
+          description: Current bot metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BotMetrics'
+                
+  # Session Management API
+  /sessions:
+    get:
+      summary: List Active Sessions
+      description: Get all currently active interview sessions
+      responses:
+        '200':
+          description: List of active sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InterviewSession'
+                  
+    post:
+      summary: Create New Session
+      description: Create a new interview session for a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+      responses:
+        '201':
+          description: Session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewSession'
+        '400':
+          description: Invalid session data
+          
+  /sessions/{user_id}:
+    get:
+      summary: Get User Session
+      description: Retrieve specific user's interview session
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Telegram user ID
+      responses:
+        '200':
+          description: User session data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewSession'
+        '404':
+          description: Session not found
+          
+    put:
+      summary: Update User Session
+      description: Update existing interview session state
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Telegram user ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InterviewSession'
+      responses:
+        '200':
+          description: Session updated successfully
+        '404':
+          description: Session not found
+          
+    delete:
+      summary: Delete User Session
+      description: Remove user's interview session
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Telegram user ID
+      responses:
+        '200':
+          description: Session deleted successfully
+        '404':
+          description: Session not found
+          
+  # Claude Integration API
+  /claude/interview-response:
+    post:
+      summary: Generate Interview Response
+      description: Get AI-generated interview response from Claude
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaudeRequest'
+      responses:
+        '200':
+          description: Interview response generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaudeResponse'
+        '400':
+          description: Invalid request data
+        '500':
+          description: Claude API error
+          
+  # Prompt Management API
+  /prompts:
+    get:
+      summary: List Available Prompts
+      description: Get all available interviewer prompt variants
+      responses:
+        '200':
+          description: List of prompt variants
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PromptVariant'
+                  
+  /prompts/{variant}:
+    get:
+      summary: Get Specific Prompt
+      description: Retrieve specific prompt variant content
+      parameters:
+        - name: variant
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [v1_master, v2_telegram, v3_conversational, v4_stage_specific, v5_conversation_mgmt]
+          description: Prompt variant identifier
+      responses:
+        '200':
+          description: Prompt content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PromptContent'
+        '404':
+          description: Prompt variant not found
+
+components:
+  schemas:
+    # Core Data Models
+    InterviewSession:
+      type: object
+      description: Complete interview session state
+      properties:
+        user_id:
+          type: integer
+          description: Telegram user ID
+        username:
+          type: string
+          description: User's display name
+        prompt_variant:
+          $ref: '#/components/schemas/PromptVariantEnum'
+        current_stage:
+          $ref: '#/components/schemas/InterviewStageEnum'
+        stage_completeness:
+          type: object
+          description: Completion percentage for each stage
+          additionalProperties:
+            type: integer
+            minimum: 0
+            maximum: 100
+        conversation_history:
+          type: array
+          description: Complete conversation log
+          items:
+            $ref: '#/components/schemas/ConversationMessage'
+        start_time:
+          type: string
+          format: date-time
+          description: Session start timestamp
+        last_activity:
+          type: string
+          format: date-time
+          description: Last user interaction timestamp
+        question_depth:
+          type: integer
+          minimum: 1
+          maximum: 4
+          description: Current question depth level
+          default: 1
+        engagement_level:
+          type: string
+          enum: [high, medium, low]
+          description: User engagement assessment
+          default: medium
+        examples_collected:
+          type: integer
+          minimum: 0
+          description: Number of concrete examples gathered
+          default: 0
+        key_insights:
+          type: array
+          items:
+            type: string
+          description: Important insights discovered during interview
+      required:
+        - user_id
+        - username
+        - prompt_variant
+        - current_stage
+        - stage_completeness
+        - conversation_history
+        - start_time
+        - last_activity
+        
+    ConversationMessage:
+      type: object
+      description: Single message in conversation history
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+          description: Message sender role
+        content:
+          type: string
+          description: Message content
+        timestamp:
+          type: string
+          format: date-time
+          description: Message timestamp
+        stage:
+          $ref: '#/components/schemas/InterviewStageEnum'
+        metadata:
+          type: object
+          description: Additional message metadata
+          additionalProperties: true
+      required:
+        - role
+        - content
+        - timestamp
+        - stage
+        
+    PromptVariantEnum:
+      type: string
+      enum:
+        - v1_master
+        - v2_telegram
+        - v3_conversational
+        - v4_stage_specific
+        - v5_conversation_mgmt
+      description: |
+        Available interviewer prompt variants:
+        - v1_master: Comprehensive systematic approach
+        - v2_telegram: Mobile-friendly concise messages
+        - v3_conversational: Natural flow with systematic coverage
+        - v4_stage_specific: Detailed approach for each stage
+        - v5_conversation_mgmt: Advanced recovery and adaptation
+        
+    InterviewStageEnum:
+      type: string
+      enum:
+        - greeting
+        - profiling
+        - essence
+        - operations
+        - expertise_map
+        - failure_modes
+        - mastery
+        - growth_path
+        - wrap_up
+      description: |
+        9-stage interview process:
+        - greeting: Initial rapport building (3-5 min)
+        - profiling: Expert background mapping (10 min)
+        - essence: Core role philosophy (15 min)
+        - operations: Daily work processes (20 min)
+        - expertise_map: Knowledge hierarchy (20 min)
+        - failure_modes: Error patterns and prevention (20 min)
+        - mastery: Expert-level insights (15 min)
+        - growth_path: Professional development timeline (15 min)
+        - wrap_up: Interview conclusion (5 min)
+        
+    # Claude API Models
+    ClaudeRequest:
+      type: object
+      description: Request for Claude AI interview response
+      properties:
+        session:
+          $ref: '#/components/schemas/InterviewSession'
+        user_message:
+          type: string
+          description: User's latest message
+        prompt_variant:
+          $ref: '#/components/schemas/PromptVariantEnum'
+      required:
+        - session
+        - user_message
+        - prompt_variant
+        
+    ClaudeResponse:
+      type: object
+      description: Structured response from Claude AI
+      properties:
+        interview_stage:
+          $ref: '#/components/schemas/InterviewStageEnum'
+        response:
+          type: string
+          description: Interviewer's response message
+        metadata:
+          type: object
+          description: Response metadata
+          properties:
+            question_depth:
+              type: integer
+              minimum: 1
+              maximum: 4
+              description: Current question depth level
+            completeness:
+              type: integer
+              minimum: 0
+              maximum: 100
+              description: Stage completion percentage
+            engagement_level:
+              type: string
+              enum: [high, medium, low]
+              description: User engagement assessment
+          required:
+            - question_depth
+            - completeness
+            - engagement_level
+        internal_tracking:
+          type: object
+          description: Internal tracking data
+          properties:
+            key_insights:
+              type: array
+              items:
+                type: string
+              description: Insights discovered in this exchange
+            examples_collected:
+              type: integer
+              description: Total examples collected so far
+            follow_up_needed:
+              type: array
+              items:
+                type: string
+              description: Areas requiring deeper exploration
+            stage_transition_ready:
+              type: boolean
+              description: Whether ready to move to next stage
+        error:
+          type: string
+          description: Error code if response generation failed
+          enum:
+            - JSON_PARSE_FAILED
+            - API_ERROR
+            - API_RETRY_FAILED
+      required:
+        - interview_stage
+        - response
+        - metadata
+        
+    # Prompt Management Models
+    PromptVariant:
+      type: object
+      description: Interviewer prompt variant information
+      properties:
+        id:
+          $ref: '#/components/schemas/PromptVariantEnum'
+        name:
+          type: string
+          description: Human-readable name
+        description:
+          type: string
+          description: Detailed description of the variant
+        icon:
+          type: string
+          description: Emoji icon for the variant
+      required:
+        - id
+        - name
+        - description
+        
+    PromptContent:
+      type: object
+      description: Full prompt content for a variant
+      properties:
+        variant:
+          $ref: '#/components/schemas/PromptVariantEnum'
+        content:
+          type: string
+          description: Complete prompt text
+        last_modified:
+          type: string
+          format: date-time
+          description: Last modification timestamp
+      required:
+        - variant
+        - content
+        
+    # Telegram Bot Models
+    TelegramUpdate:
+      type: object
+      description: Telegram Bot API Update object
+      properties:
+        update_id:
+          type: integer
+          description: Unique update identifier
+        message:
+          $ref: '#/components/schemas/TelegramMessage'
+        callback_query:
+          $ref: '#/components/schemas/TelegramCallbackQuery'
+      required:
+        - update_id
+        
+    TelegramMessage:
+      type: object
+      description: Telegram message object
+      properties:
+        message_id:
+          type: integer
+        from:
+          $ref: '#/components/schemas/TelegramUser'
+        chat:
+          $ref: '#/components/schemas/TelegramChat'
+        date:
+          type: integer
+          description: Unix timestamp
+        text:
+          type: string
+          description: Message text
+      required:
+        - message_id
+        - from
+        - chat
+        - date
+        
+    TelegramCallbackQuery:
+      type: object
+      description: Telegram callback query from inline keyboard
+      properties:
+        id:
+          type: string
+        from:
+          $ref: '#/components/schemas/TelegramUser'
+        message:
+          $ref: '#/components/schemas/TelegramMessage'
+        data:
+          type: string
+          description: Callback data
+      required:
+        - id
+        - from
+        - data
+        
+    TelegramUser:
+      type: object
+      description: Telegram user object
+      properties:
+        id:
+          type: integer
+        is_bot:
+          type: boolean
+        first_name:
+          type: string
+        last_name:
+          type: string
+        username:
+          type: string
+        language_code:
+          type: string
+      required:
+        - id
+        - is_bot
+        - first_name
+        
+    TelegramChat:
+      type: object
+      description: Telegram chat object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [private, group, supergroup, channel]
+        title:
+          type: string
+        username:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+      required:
+        - id
+        - type
+        
+    # Response Models
+    CommandResponse:
+      type: object
+      description: Generic command response
+      properties:
+        success:
+          type: boolean
+          description: Command execution status
+        message:
+          type: string
+          description: Response message
+        data:
+          type: object
+          description: Additional response data
+          additionalProperties: true
+      required:
+        - success
+        - message
+        
+    InterviewStatus:
+      type: object
+      description: Current interview progress status
+      properties:
+        user_id:
+          type: integer
+        current_stage:
+          $ref: '#/components/schemas/InterviewStageEnum'
+        duration_minutes:
+          type: number
+          description: Interview duration in minutes
+        question_depth:
+          type: integer
+          minimum: 1
+          maximum: 4
+        engagement_level:
+          type: string
+          enum: [high, medium, low]
+        examples_collected:
+          type: integer
+        stage_progress:
+          type: object
+          description: Progress for each stage
+          additionalProperties:
+            type: integer
+            minimum: 0
+            maximum: 100
+        total_messages:
+          type: integer
+          description: Total messages in conversation
+      required:
+        - user_id
+        - current_stage
+        - duration_minutes
+        - stage_progress
+        
+    InterviewCompletion:
+      type: object
+      description: Interview completion summary
+      properties:
+        user_id:
+          type: integer
+        completed_at:
+          type: string
+          format: date-time
+        duration_minutes:
+          type: number
+        total_messages:
+          type: integer
+        examples_collected:
+          type: integer
+        key_insights_count:
+          type: integer
+        stage_completeness:
+          type: object
+          additionalProperties:
+            type: integer
+            minimum: 0
+            maximum: 100
+        archive_file:
+          type: string
+          description: Path to archived session file
+      required:
+        - user_id
+        - completed_at
+        - duration_minutes
+        - stage_completeness
+        
+    BotMetrics:
+      type: object
+      description: Bot performance and usage metrics
+      properties:
+        sessions_active:
+          type: integer
+          description: Currently active sessions
+        sessions_started:
+          type: integer
+          description: Total sessions started
+        sessions_completed:
+          type: integer
+          description: Total sessions completed
+        messages_processed:
+          type: integer
+          description: Total messages processed
+        api_calls:
+          type: integer
+          description: Total Claude API calls
+        api_errors:
+          type: integer
+          description: Claude API call errors
+        errors_occurred:
+          type: integer
+          description: Total system errors
+        uptime_seconds:
+          type: integer
+          description: Bot uptime in seconds
+      required:
+        - sessions_active
+        - sessions_started
+        - sessions_completed
+        - messages_processed
+        - api_calls
+        - api_errors
+        - errors_occurred
+        
+    CreateSessionRequest:
+      type: object
+      description: Request to create new interview session
+      properties:
+        user_id:
+          type: integer
+          description: Telegram user ID
+        username:
+          type: string
+          description: User's display name
+        prompt_variant:
+          $ref: '#/components/schemas/PromptVariantEnum'
+      required:
+        - user_id
+        - username
+        - prompt_variant
+        
+    # Error Models
+    ErrorResponse:
+      type: object
+      description: Standard error response
+      properties:
+        error:
+          type: string
+          description: Error type identifier
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+          description: Error occurrence timestamp
+      required:
+        - error
+        - message
+        - timestamp
+
+  securitySchemes:
+    TelegramBotToken:
+      type: apiKey
+      in: header
+      name: X-Telegram-Bot-Api-Secret-Token
+      description: Secret token for webhook authentication
+      
+security:
+  - TelegramBotToken: []
+
+tags:
+  - name: Commands
+    description: Bot command handlers
+  - name: Sessions
+    description: Interview session management
+  - name: Claude
+    description: AI response generation
+  - name: Prompts
+    description: Prompt variant management
+  - name: Metrics
+    description: Bot performance monitoring

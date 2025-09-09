@@ -1,0 +1,71 @@
+# AI Interviewer Telegram Bot Requirements
+# Updated with Russian localization and voice processing support
+
+# Telegram Bot Framework
+python-telegram-bot==20.7
+
+# Claude API Integration  
+anthropic==0.34.2
+
+# Voice Processing with Assembly AI
+assemblyai==0.20.0
+pydub==0.25.1
+httpx==0.25.2
+
+# Audio processing system dependencies
+ffmpeg-python==0.2.0  # Python wrapper for FFmpeg
+soundfile==0.12.1     # Audio file I/O
+
+# Async HTTP Client
+aiohttp==3.9.1
+aiofiles==23.2.0
+
+# Data Processing
+pandas==2.1.4
+numpy==1.24.4
+
+# Configuration Management
+python-dotenv==1.0.0
+pydantic==2.5.2
+
+# Localization Support
+babel==2.14.0         # Internationalization utilities
+pytz==2023.3          # Timezone support for localization
+
+# Logging and Monitoring
+structlog==23.2.0
+
+# JSON Processing
+ujson==5.8.0
+
+# File handling and utilities
+pathlib-mate==1.2.0  # Enhanced pathlib functionality
+tempfile-extra==0.1.0  # Enhanced temporary file handling
+
+# Enhanced error handling
+tenacity==8.2.3       # Retry library for robust operations
+
+# Development and Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-mock==3.12.0  # Mock utilities for testing
+black==23.11.0
+flake8==6.1.0
+mypy==1.7.1           # Type checking
+
+# Voice testing utilities
+pytest-audio==0.1.0  # Audio file testing utilities (if available)
+
+# Optional: Database support for production deployments
+# sqlalchemy==2.0.23
+# alembic==1.13.1
+# asyncpg==0.29.0
+# redis==5.0.1        # For session caching
+
+# Optional: Monitoring and metrics
+# prometheus-client==0.19.0
+# datadog==0.48.0
+
+# Optional: Security enhancements
+# cryptography==41.0.7
+# python-jose==3.3.0

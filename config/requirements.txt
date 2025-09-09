@@ -1,0 +1,51 @@
+# AI Interviewer Telegram Bot Requirements
+
+# Telegram Bot Framework
+python-telegram-bot==20.7
+
+# Claude API Integration  
+anthropic==0.34.2
+
+# Voice Processing (Optional - requires AssemblyAI API key)
+assemblyai==0.20.0
+pydub==0.25.1
+httpx==0.25.2
+
+# Async HTTP Client
+aiohttp==3.9.1
+aiofiles==23.2.0
+
+# Data Processing
+pandas==2.1.4
+numpy==1.24.4
+
+# Configuration Management
+python-dotenv==1.0.0
+pydantic==2.5.2
+
+# Logging and Monitoring
+structlog==23.2.0
+
+# JSON Processing
+ujson==5.8.0
+
+# Development and Testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-mock==3.12.0
+pytest-cov==4.1.0
+pytest-timeout==2.2.0
+pytest-xdist==3.5.0
+coverage==7.3.4
+black==23.11.0
+flake8==6.1.0
+mypy==1.8.0
+
+# Test Data Generation
+factory-boy==3.3.0
+faker==21.0.0
+
+# Optional: Database support
+# sqlalchemy==2.0.23
+# alembic==1.13.1
+# asyncpg==0.29.0

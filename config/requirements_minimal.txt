@@ -1,0 +1,25 @@
+# AI Interviewer Telegram Bot - Minimal Requirements for PythonAnywhere
+# Production deployment requirements only
+
+# Core Telegram Bot Framework
+python-telegram-bot==20.7
+
+# Claude AI Integration  
+anthropic==0.34.2
+
+# Voice Processing (AssemblyAI + Audio handling)
+assemblyai==0.20.0
+pydub==0.25.1
+httpx==0.25.2
+
+# Configuration Management
+python-dotenv==1.0.0
+
+# Structured Logging
+structlog==23.2.0
+
+# Audio Metadata (for voice tests)
+mutagen==1.47.0
+
+# Core Python Libraries (usually pre-installed but just in case)
+# pathlib, json, asyncio, logging, os, datetime are built-in

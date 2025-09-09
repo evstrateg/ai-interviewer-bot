@@ -1,0 +1,86 @@
+# Development Docker Compose - extends the main compose file
+version: '3.8'
+
+services:
+  ai-interviewer-bot:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: builder  # Use builder stage for development with more tools
+    container_name: ai-interviewer-bot-dev
+    
+    # Override command for development
+    command: ["python", "-m", "src.core.bot_enhanced"]
+    
+    # Development environment variables
+    environment:
+      - LOG_LEVEL=DEBUG
+      - PYTHONPATH=/app
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+      
+    # Development volumes - mount source for live editing
+    volumes:
+      - ../src:/app/src:ro
+      - ../config:/app/config:ro
+      - ../data:/app/data
+      - ../.env:/app/.env:ro
+      # Development tools
+      - ../tests:/app/tests:ro
+      
+    # Expose additional ports for debugging
+    ports:
+      - "8080:8080"  # Health check
+      - "5678:5678"  # Debugpy
+      
+    # Override resource limits for development
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+          
+    # Development profiles
+    profiles:
+      - development
+      
+  # Redis for development testing
+  redis:
+    profiles:
+      - development
+      - testing
+    ports:
+      - "6379:6379"
+      
+  # PostgreSQL for development testing  
+  postgres:
+    profiles:
+      - development
+      - testing
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=ai_interviewer_dev
+      - POSTGRES_USER=dev_user
+      - POSTGRES_PASSWORD=dev_password
+      
+  # Test runner service
+  test-runner:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: builder
+    container_name: ai-interviewer-tests
+    command: ["python", "-m", "pytest", "tests/", "-v"]
+    environment:
+      - PYTHONPATH=/app
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ../src:/app/src:ro
+      - ../tests:/app/tests:ro
+      - ../config:/app/config:ro
+    profiles:
+      - testing
+    depends_on:
+      - redis
+      - postgres
