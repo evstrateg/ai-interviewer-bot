@@ -1,0 +1,19 @@
+# Voice Processing Add-on Requirements
+# Install these additionally if you want voice message support
+
+# AssemblyAI voice transcription
+assemblyai==0.20.0
+
+# Audio processing and format conversion  
+pydub==0.25.1
+
+# HTTP client for AssemblyAI API
+httpx==0.25.2
+
+# Audio metadata extraction (for testing)
+mutagen==1.47.0
+
+# NOTE: Also requires FFmpeg to be installed system-wide:
+# Ubuntu/Debian: sudo apt install ffmpeg
+# CentOS/RHEL: sudo yum install ffmpeg
+# macOS: brew install ffmpeg

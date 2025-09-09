@@ -60,9 +60,22 @@ source venv/bin/activate
 echo -e "${BLUE}[UPGRADE]${NC} Upgrading pip..."
 python -m pip install --upgrade pip
 
-# Install minimal requirements for production
-echo -e "${BLUE}[INSTALL]${NC} Installing Python dependencies..."
-pip install -r config/requirements_minimal.txt
+# Install production requirements (including voice processing)
+echo -e "${BLUE}[INSTALL]${NC} Installing production dependencies..."
+echo "Installing all required dependencies including voice processing"
+pip install -r config/requirements_production.txt
+echo -e "${GREEN}[OK]${NC} All dependencies installed (8 packages)"
+
+# Check if FFmpeg is available (needed for audio processing)
+echo -e "${BLUE}[CHECK]${NC} Checking FFmpeg availability..."
+if command -v ffmpeg &> /dev/null; then
+    echo -e "${GREEN}[OK]${NC} FFmpeg is installed"
+else
+    echo -e "${YELLOW}[WARNING]${NC} FFmpeg not found - voice processing may not work"
+    echo "To install FFmpeg on PythonAnywhere:"
+    echo "  Contact support to install FFmpeg, or"
+    echo "  Use workaround: audio files will be processed without conversion"
+fi
 
 # Create necessary directories
 echo -e "${BLUE}[MKDIR]${NC} Creating required directories..."
@@ -73,6 +86,10 @@ if [ ! -f .env ]; then
     echo -e "${YELLOW}[ENV]${NC} Creating .env file from template..."
     cp .env.example .env
     
+    # Configure voice processing (always enabled)
+    echo "VOICE_PROCESSING_ENABLED=true" >> .env
+    echo "ASSEMBLYAI_API_KEY=your_assemblyai_key_here" >> .env
+    
     echo -e "${YELLOW}[IMPORTANT]${NC} =================================="
     echo "🔑 Please edit the .env file with your API keys:"
     echo "   nano .env"
@@ -80,6 +97,12 @@ if [ ! -f .env ]; then
     echo "Required variables:"
     echo "   TELEGRAM_BOT_TOKEN=your_telegram_bot_token"
     echo "   ANTHROPIC_API_KEY=your_anthropic_api_key"
+    
+    echo "   ASSEMBLYAI_API_KEY=your_assemblyai_api_key (REQUIRED for voice messages)"
+    echo ""
+    echo "Voice processing is ENABLED and REQUIRED. Make sure to:"
+    echo "1. Set ASSEMBLYAI_API_KEY in .env (get from https://www.assemblyai.com)"
+    echo "2. FFmpeg is recommended for optimal audio processing"
     echo -e "${YELLOW}=================================="${NC}
 else
     echo -e "${GREEN}[OK]${NC} .env file already exists"

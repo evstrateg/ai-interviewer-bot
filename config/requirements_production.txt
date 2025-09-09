@@ -1,0 +1,23 @@
+# AI Interviewer Telegram Bot - Production Requirements
+# Full deployment with voice processing support
+
+# Core Telegram Bot Framework
+python-telegram-bot==20.7
+
+# Claude AI Integration  
+anthropic==0.34.2
+
+# Configuration Management
+python-dotenv==1.0.0
+
+# Structured Logging
+structlog==23.2.0
+
+# Voice Processing Dependencies (REQUIRED)
+assemblyai==0.20.0
+pydub==0.25.1
+httpx==0.25.2
+mutagen==1.47.0
+
+# Total: 8 packages for full functionality including voice processing
+# FFmpeg also required system-wide for optimal audio processing
