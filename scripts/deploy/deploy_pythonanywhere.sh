@@ -60,25 +60,21 @@ source venv/bin/activate
 echo -e "${BLUE}[UPGRADE]${NC} Upgrading pip..."
 python -m pip install --upgrade pip
 
-# Install minimal requirements for production
-echo -e "${BLUE}[INSTALL]${NC} Installing core Python dependencies..."
-pip install -r config/requirements_minimal.txt
+# Install production requirements (including voice processing)
+echo -e "${BLUE}[INSTALL]${NC} Installing production dependencies..."
+echo "Installing all required dependencies including voice processing"
+pip install -r config/requirements_production.txt
+echo -e "${GREEN}[OK]${NC} All dependencies installed (8 packages)"
 
-# Ask about voice processing
-echo ""
-echo -e "${YELLOW}[OPTIONAL]${NC} Enable voice message processing? (y/N)"
-echo "This will install additional dependencies (AssemblyAI, pydub, etc.)"
-read -n 1 -r VOICE_REPLY
-echo ""
-
-if [[ $VOICE_REPLY =~ ^[Yy]$ ]]; then
-    echo -e "${BLUE}[INSTALL]${NC} Installing voice processing dependencies..."
-    pip install -r config/requirements_voice.txt
-    VOICE_ENABLED=true
-    echo -e "${GREEN}[OK]${NC} Voice processing dependencies installed"
+# Check if FFmpeg is available (needed for audio processing)
+echo -e "${BLUE}[CHECK]${NC} Checking FFmpeg availability..."
+if command -v ffmpeg &> /dev/null; then
+    echo -e "${GREEN}[OK]${NC} FFmpeg is installed"
 else
-    VOICE_ENABLED=false
-    echo -e "${YELLOW}[SKIP]${NC} Voice processing skipped"
+    echo -e "${YELLOW}[WARNING]${NC} FFmpeg not found - voice processing may not work"
+    echo "To install FFmpeg on PythonAnywhere:"
+    echo "  Contact support to install FFmpeg, or"
+    echo "  Use workaround: audio files will be processed without conversion"
 fi
 
 # Create necessary directories
@@ -90,13 +86,9 @@ if [ ! -f .env ]; then
     echo -e "${YELLOW}[ENV]${NC} Creating .env file from template..."
     cp .env.example .env
     
-    # Configure voice processing setting
-    if [ "$VOICE_ENABLED" = true ]; then
-        echo "VOICE_PROCESSING_ENABLED=true" >> .env
-        echo "ASSEMBLYAI_API_KEY=your_assemblyai_key_here" >> .env
-    else
-        echo "VOICE_PROCESSING_ENABLED=false" >> .env
-    fi
+    # Configure voice processing (always enabled)
+    echo "VOICE_PROCESSING_ENABLED=true" >> .env
+    echo "ASSEMBLYAI_API_KEY=your_assemblyai_key_here" >> .env
     
     echo -e "${YELLOW}[IMPORTANT]${NC} =================================="
     echo "🔑 Please edit the .env file with your API keys:"
@@ -106,19 +98,11 @@ if [ ! -f .env ]; then
     echo "   TELEGRAM_BOT_TOKEN=your_telegram_bot_token"
     echo "   ANTHROPIC_API_KEY=your_anthropic_api_key"
     
-    # Add voice processing note if enabled
-    if [ "$VOICE_ENABLED" = true ]; then
-        echo "   ASSEMBLYAI_API_KEY=your_assemblyai_api_key"
-        echo ""
-        echo "Voice processing is ENABLED. Make sure to:"
-        echo "1. Set ASSEMBLYAI_API_KEY in .env"
-        echo "2. Install FFmpeg: sudo apt install ffmpeg"
-    else
-        echo ""
-        echo "Voice processing is DISABLED (saves resources)"
-        echo "To enable later: set VOICE_PROCESSING_ENABLED=true in .env"
-        echo "and install voice dependencies: pip install -r config/requirements_voice.txt"
-    fi
+    echo "   ASSEMBLYAI_API_KEY=your_assemblyai_api_key (REQUIRED for voice messages)"
+    echo ""
+    echo "Voice processing is ENABLED and REQUIRED. Make sure to:"
+    echo "1. Set ASSEMBLYAI_API_KEY in .env (get from https://www.assemblyai.com)"
+    echo "2. FFmpeg is recommended for optimal audio processing"
     echo -e "${YELLOW}=================================="${NC}
 else
     echo -e "${GREEN}[OK]${NC} .env file already exists"
